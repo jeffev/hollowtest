@@ -51,6 +51,20 @@ Python gets the same rules, plus two of its own: `assert (cond, "msg")`, which i
 
 It is careful about false positives. It understands helpers that assert (local, or imported from your test utils), Testing Library queries that throw (`getByText`), the mocha `done` callback contract, `expect.assertions(n)`, the `let threw = false` pattern, compile-time type tests (`expectTypeOf`, `Expect<Equal<A, B>>`, `@ts-expect-error`), loops over literal arrays, and "does not throw" smoke tests (reported as warnings, not errors).
 
+## Fix what is mechanical
+
+```bash
+npx hollowtest --fix            # or --fix --dry-run to preview
+```
+
+```
+fixed  checkout.test.ts: add expect.assertions(1), await .toHaveLength
+fixed  focused.test.js: remove .only
+fixed  test_hollow.py: assert (cond, msg) -> assert cond, msg
+```
+
+It only rewrites what has one correct answer: `expect(x).toBeNull` gets its `()`, a floating `.resolves`/`.rejects` gets `await` (and the test becomes `async`), `.only`/`fit`/`fdescribe` are removed, a catch-only test gets `expect.assertions(n)`, and Python's `assert (cond, "msg")` becomes `assert cond, "msg"`. Some fixed tests will start failing. That is the point: they were hiding a failure. Tautologies, missing assertions and weak checks need a human (or your agent with the skill), because only you know the expected value.
+
 ## The mutation check: proof, not opinion
 
 Static rules find tests that look hollow. `--mutate` proves it. It changes your code the way a real bug would (`>` becomes `>=`, `&&` becomes `||`, a condition is forced to `true`, a return value becomes `null`), runs only the tests that import that file, and restores the file.

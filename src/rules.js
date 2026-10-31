@@ -54,7 +54,10 @@ export const RULES = [
         if (e.type === 'CallExpression' && (chain.length === 1 || (chain.length === 2 && (chain[1] === 'soft' || chain[1] === 'poll')))) {
           out.push({ line: line(node), message: '`expect(...)` is never followed by a matcher, so it asserts nothing.' });
         } else if (e.type === 'MemberExpression' && !CHAI_TERMINALS.has(chain[chain.length - 1])) {
-          out.push({ line: line(node), message: `\`.${chain[chain.length - 1]}\` is referenced but never called: add \`()\`.` });
+          const name = chain[chain.length - 1];
+          // Jest/Vitest matchers (toBeNull, toBeTruthy...) take no arguments here, so adding () is safe.
+          const fix = /^to[A-Z]/.test(name) ? [{ start: e.end, end: e.end, text: '()', label: `add () to .${name}` }] : undefined;
+          out.push({ line: line(node), message: `\`.${name}\` is referenced but never called: add \`()\`.`, fix });
         }
       });
       return out;
@@ -92,7 +95,7 @@ export const RULES = [
         const blockThrows = containsThrow(node.block);
         const catchRethrows = containsThrow(node.handler.body) || /\b(done|reject|fail)\s*\(/.test(sourceOf(code, node.handler.body));
         if (inCatch.length && !inBlock.length && !blockThrows && !guarded && !flagCheckedAfter(node, assertions)) {
-          out.push({ line: line(node), message: 'The assertions live in `catch`; if the code stops throwing, this test still passes. Use `expect(() => ...).toThrow()` / `await expect(p).rejects...`, or add `expect.assertions(n)`.' });
+          out.push({ line: line(node), message: 'The assertions live in `catch`; if the code stops throwing, this test still passes. Use `expect(() => ...).toThrow()` / `await expect(p).rejects...`, or add `expect.assertions(n)`.', fix: assertionCountFix(fn, assertions, code) });
         } else if (inBlock.length && !inCatch.length && !catchRethrows) {
           out.push({ line: line(node), message: 'Assertions inside `try` are caught by a `catch` that does not rethrow: a failing assertion is silently ignored.' });
         }
@@ -111,7 +114,12 @@ export const RULES = [
       for (const a of real(assertions)) {
         if (a.kind === 'type') continue; // checked by the compiler, not at runtime
         if (a.isAsync && isFloating(a.node, a.parent)) {
-          out.push({ line: line(a.node), message: `\`${a.matcher}\` is asynchronous but not awaited or returned: the test finishes before it runs.` });
+          // Only when the statement sits directly in the test callback, so `await` lands in the right function.
+          const direct = a.ancestors.slice(1).every((n) => !isFunction(n));
+          const fix = direct && a.parent?.type === 'ExpressionStatement'
+            ? [{ start: a.node.start, end: a.node.start, text: 'await ', label: `await .${a.matcher}` }, ...(fn.async ? [] : [{ start: fn.start, end: fn.start, text: 'async ', label: 'make the test async' }])]
+            : undefined;
+          out.push({ line: line(a.node), message: `\`${a.matcher}\` is asynchronous but not awaited or returned: the test finishes before it runs.`, fix });
           continue;
         }
         if (usesDone) continue;
@@ -211,6 +219,23 @@ function flagCheckedAfter(tryNode, assertions) {
     walk(a.node, (x) => { if (x.type === 'Identifier' && touched.has(x.name)) hit = true; });
     return hit;
   });
+}
+
+/**
+ * `expect.assertions(n)` as the first line of a Jest/Vitest test whose expects all run unconditionally
+ * apart from the catch block: the test then fails when nothing throws.
+ */
+function assertionCountFix(fn, assertions, code) {
+  if (fn.body.type !== 'BlockStatement' || !fn.body.body.length) return undefined;
+  const rs = real(assertions);
+  if (!rs.length || !rs.every((a) => memberChain(a.node.callee || a.node)[0] === 'expect')) return undefined;
+  const loopy = rs.some((a) => a.ancestors.some((n) => /^(For|ForOf|ForIn|While|DoWhile|If|Switch)Statement$/.test(n.type) || n.type === 'ConditionalExpression' || (isFunction(n) && n !== fn)));
+  if (loopy) return undefined;
+  const first = fn.body.body[0];
+  const lineStart = code.lastIndexOf('\n', first.start - 1) + 1;
+  const indent = code.slice(lineStart, first.start);
+  if (!/^\s*$/.test(indent)) return undefined;
+  return [{ start: first.start, end: first.start, text: `expect.assertions(${rs.length});\n${indent}`, label: `add expect.assertions(${rs.length})` }];
 }
 
 function awaitsAfter(body, pos) {

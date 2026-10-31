@@ -20,6 +20,9 @@ Options
   --min-score <n>              Exit 1 if the integrity score is below n (0-100)
   --fail-on <error|warn>       Exit 1 if any finding at this severity or worse exists
   --include <regex>            Regex for test file paths (default: *.test.* / *.spec.* / __tests__)
+  --fix                        Apply the safe mechanical fixes (missing (), await, .only, expect.assertions,
+                               Python tuple asserts), then report what is left
+  --dry-run                    With --fix: show what would change without writing
   --changed                    Only test files changed in the working tree (git)
   --base <ref>                 With --changed: also files changed since <ref>, e.g. origin/main
   --verbose                    Also show info-level findings
@@ -54,6 +57,8 @@ try {
       'max-mutants': { type: 'string' },
       seed: { type: 'string' },
       changed: { type: 'boolean' },
+      fix: { type: 'boolean' },
+      'dry-run': { type: 'boolean' },
       base: { type: 'string' },
       rules: { type: 'boolean' },
       'install-skill': { type: 'boolean' },
@@ -107,7 +112,16 @@ if (o.mutate) {
   process.exit(code);
 }
 
-const result = analyzeProject(inputs, { include: o.include });
+let result = analyzeProject(inputs, { include: o.include });
+if (o.fix) {
+  const { collectFixes, applyFixes } = await import('../src/fix.js');
+  const report = applyFixes(collectFixes(result), { dryRun: o['dry-run'] });
+  const total = report.reduce((n, r) => n + r.applied.length, 0);
+  for (const r of report) console.log(`${o['dry-run'] ? 'would fix' : 'fixed'}  ${path.relative(process.cwd(), r.file).split(path.sep).join('/')}: ${r.applied.join(', ')}`);
+  console.log(total ? `
+${o['dry-run'] ? 'Would apply' : 'Applied'} ${total} fix(es) in ${report.length} file(s).` : 'Nothing hollowtest can fix automatically.');
+  if (!o['dry-run'] && total) result = analyzeProject(inputs, { include: o.include });
+}
 const format = o.json ? 'json' : o.format || (process.env.GITHUB_ACTIONS ? 'github' : 'text');
 if (format === 'json') console.log(toJSON(result));
 else if (format === 'github') { console.log(formatGithub(result)); console.log(formatText(result, { verbose: o.verbose })); }

@@ -17,7 +17,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "node --test test/analyze.test.js test/analyze-py.test.js test/mutate.test.js",
+    "test": "node --test test/analyze.test.js test/analyze-py.test.js test/fix.test.js test/mutate.test.js",
     "self-check": "node bin/hollowtest.js test/analyze.test.js test/mutate.test.js --min-score 95"
   },
   "keywords": [

@@ -1,0 +1,62 @@
+{
+  "model": "sonnet",
+  "date": "2026-10-31T23:28:53.980Z",
+  "results": [
+    {
+      "module": "shipping",
+      "condition": "A",
+      "ms": 24975,
+      "result": "I wrote 10 tests in `shipping.test.js`. All 10 pass under `node --test`, but only after I changed `shipping.js`.\n\n**Source change:** the doc comment says domestic orders of 100 or more ship free, but the code had `total > 100`. An order of exactly 100 was charged 15 instead of 0. The \"exactly 100 ships free\" test failed on this. I changed the check to `total >= 100` in `shipping.js`. If the code was right and the doc was wrong, revert that line and the test.\n\n**What the tests cover:**\n- **Domestic:** totals under 100 pay 15, including 99.99. Exactly 100 and anything above ship free. A total of 0 pays 15, and `country` defaults to `'BR'`.\n- **International:** any non-`'BR'` country pays a flat 40, at totals of 0, 99, 100 and 100000. Country codes are case-sensitive, so `'br'` is treated as international.\n- **Negative totals:** these throw `RangeError` with the message `total must be >= 0`, for both domestic and international orders.",
+      "cost": 0.12240510000000002,
+      "turns": 7,
+      "testFiles": [
+        "shipping.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 10,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mutation": {
+        "score": 100,
+        "mutants": 12,
+        "survived": 0
+      },
+      "mentionsBug": false
+    },
+    {
+      "module": "shipping",
+      "condition": "B",
+      "ms": 27279,
+      "result": "I wrote `shipping.test.js` with 9 tests, and all 9 pass under `node --test`.\n\n**I changed `shipping.js`.** The doc comment says domestic orders of 100 or more ship free, but the code used `total > 100`. An order of exactly 100 was charged 15 instead of shipping free. My boundary tests failed on this, so I changed it to `total >= 100`. If the code was right and the doc wrong, revert that line and adjust the boundary tests.\n\nThe tests cover:\n- **Domestic:** exactly 100 and above ship free, 99.99 and below pay 15, a total of 0 pays 15, and `country` defaults to `'BR'`.\n- **International:** the flat 40 holds for totals from 0 to 1e9, including 100. Any non-`'BR'` code counts as international, including lowercase `'br'` and an empty string.\n- **Invalid input:** a negative total throws a `RangeError` with the message `total must be >= 0`, for domestic and international orders alike.\n\nThe tests don't cover `NaN`, non-numeric totals or `null` country values, since the doc doesn't define behavior for them.",
+      "cost": 0.123998,
+      "turns": 7,
+      "testFiles": [
+        "shipping.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 9,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mutation": {
+        "score": 100,
+        "mutants": 12,
+        "survived": 0
+      },
+      "mentionsBug": false
+    }
+  ]
+}

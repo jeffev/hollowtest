@@ -80,8 +80,8 @@ export function toJSON(result) {
     files: result.files.map((f) => ({
       file: f.file,
       parseError: f.parseError,
-      fileFindings: f.fileFindings.map(({ subject, ...rest }) => rest),
-      tests: f.tests.map((t) => ({ name: t.name, line: t.line, mode: t.mode, assertions: t.assertions, health: testHealth(t), findings: t.findings })),
+      fileFindings: f.fileFindings.map(({ subject, fix, ...rest }) => rest),
+      tests: f.tests.map((t) => ({ name: t.name, line: t.line, mode: t.mode, assertions: t.assertions, health: testHealth(t), findings: t.findings.map(({ fix, ...rest }) => rest) })),
     })),
   }, null, 2);
 }

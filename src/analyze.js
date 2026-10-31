@@ -37,13 +37,14 @@ export function analyzeFile(code, file, opts = {}) {
     }
   });
   let hasOnly = false;
+  const onlyFixes = [];
 
   walk(ast.program, (node, parent, ancestors) => {
     if (node.type !== 'CallExpression') return;
     const info = testCallInfo(node);
     if (!info) return;
     if (info.suite) {
-      if (info.mode === 'only') hasOnly = true;
+      if (info.mode === 'only') { hasOnly = true; onlyFixes.push(...unfocusFix(node)); }
       return; // keep walking into the suite body
     }
     // Ignore test() calls nested inside another test's callback (subtests are analyzed as part of the parent).
@@ -51,7 +52,7 @@ export function analyzeFile(code, file, opts = {}) {
     const suiteModes = ancestors.filter((a) => a.type === 'CallExpression').map((a) => testCallInfo(a)).filter((i) => i?.suite).map((i) => i.mode);
     let mode = info.mode;
     if (mode === 'run' && suiteModes.includes('skip')) mode = 'skip';
-    if (mode === 'only') hasOnly = true;
+    if (info.mode === 'only') { hasOnly = true; onlyFixes.push(...unfocusFix(node)); }
     const fn = node.arguments.find((a) => isFunction(a));
     const test = {
       name: testName(node, code),
@@ -82,7 +83,7 @@ export function analyzeFile(code, file, opts = {}) {
     const env = { code, file, fn, test, assertions, ctx, comments: testComments, smokeName: SMOKE_NAME.test(test.name), constArrays };
     for (const rule of RULES) {
       if (!rule.check) continue;
-      for (const f of rule.check(env) || []) test.findings.push({ rule: rule.id, severity: f.severity || rule.severity, line: f.line ?? test.line, message: f.message });
+      for (const f of rule.check(env) || []) test.findings.push({ rule: rule.id, severity: f.severity || rule.severity, line: f.line ?? test.line, message: f.message, ...(f.fix ? { fix: f.fix } : {}) });
     }
     if (test.findings.some((f) => f.rule === 'bare-expect')) test.findings = test.findings.filter((f) => f.rule !== 'no-assertions');
     if (mode === 'skip') test.findings = test.findings.filter((f) => f.rule !== 'empty-test' && f.rule !== 'no-assertions');
@@ -95,7 +96,7 @@ export function analyzeFile(code, file, opts = {}) {
   }
   if (hasOnly) {
     const focusedLine = tests.find((t) => t.mode === 'only' || t.inOnlySuite)?.line ?? 1;
-    fileFindings.push({ rule: 'focused-test', severity: 'error', line: focusedLine, message: '.only / fit / fdescribe left in the file: every other test in this file is silently not running.' });
+    fileFindings.push({ rule: 'focused-test', severity: 'error', line: focusedLine, message: '.only / fit / fdescribe left in the file: every other test in this file is silently not running.', fix: onlyFixes });
     for (const t of tests) {
       if (t.mode !== 'only' && !t.inOnlySuite && t.mode !== 'skip' && t.mode !== 'todo') {
         t.findings.push({ rule: 'focused-test', severity: 'error', line: t.line, message: 'Will not run: another test in this file uses .only.' });
@@ -191,4 +192,21 @@ function hasTypeOnlyFunction(body) {
     if (n.type === 'CallExpression' && n.callee.type === 'Identifier') called.add(n.callee.name);
   });
   return [...declared.keys()].some((k) => !called.has(k));
+}
+
+/** it.only( -> it(, describe.only( -> describe(, fit( -> it(, fdescribe( -> describe( */
+function unfocusFix(node) {
+  let callee = node.callee;
+  while (callee.type === 'CallExpression' || callee.type === 'TaggedTemplateExpression') callee = callee.callee || callee.tag;
+  const fixes = [];
+  const visit = (c) => {
+    if (c.type === 'MemberExpression') {
+      if (!c.computed && c.property.name === 'only') fixes.push({ start: c.object.end, end: c.property.end, text: '', label: 'remove .only' });
+      visit(c.object);
+    } else if (c.type === 'Identifier' && (c.name === 'fit' || c.name === 'fdescribe')) {
+      fixes.push({ start: c.start, end: c.end, text: c.name === 'fit' ? 'it' : 'describe', label: `${c.name} -> ${c.name.slice(1)}` });
+    }
+  };
+  visit(callee);
+  return fixes;
 }
