@@ -18,7 +18,8 @@
   ],
   "scripts": {
     "test": "node --test test/analyze.test.js test/analyze-py.test.js test/fix.test.js test/mutate.test.js",
-    "self-check": "node bin/hollowtest.js test/analyze.test.js test/mutate.test.js --min-score 95"
+    "self-check": "node bin/hollowtest.js test/analyze.test.js test/mutate.test.js --min-score 95",
+    "build:site": "esbuild site/entry.js --bundle --minify --format=iife --platform=browser --target=es2020 --alias:node:path=./site/path-shim.js --outfile=docs/playground.js && node -e \"require('fs').copyFileSync('site/index.html','docs/index.html')\""
   },
   "keywords": [
     "testing",
@@ -39,5 +40,6 @@
   "author": "Jefferson Valandro",
   "dependencies": {
     "@babel/parser": "^7.29.12"
-  }
+  },
+  "homepage": "https://jeffev.github.io/hollowtest/"
 }

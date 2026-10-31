@@ -10,6 +10,8 @@ Coding agents are great at making tests pass. Sometimes they do it by writing te
 npx hollowtest
 ```
 
+Or try it in the browser, no install: **[jeffev.github.io/hollowtest](https://jeffev.github.io/hollowtest/)**.
+
 ```
 examples/checkout/checkout.test.ts
   warn   checkout.test.ts:9   calculates the subtotal      Only weak checks (toBeDefined): almost any result passes.

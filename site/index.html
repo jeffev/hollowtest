@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hollowtest playground</title>
+<meta name="description" content="Paste a test file and see which tests would pass even if the code were broken. Runs in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #e3e1db;
+    --error: #c62f2f; --error-bg: #fbeaea; --warn: #9a6200; --warn-bg: #fdf3df; --info: #55606e; --info-bg: #eef1f4;
+    --ok: #1f7a4d; --ok-bg: #e5f4ec; --accent: #1d1d1b; --code-bg: #fbfaf8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141413; --panel: #1c1c1a; --ink: #ecebe6; --muted: #9c9a93; --line: #2e2d2a;
+      --error: #f07a7a; --error-bg: #3a1d1d; --warn: #e8b357; --warn-bg: #3a2e15; --info: #a9b4c2; --info-bg: #232830;
+      --ok: #6fd3a0; --ok-bg: #15301f; --accent: #ecebe6; --code-bg: #181816;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 "IBM Plex Sans", system-ui, sans-serif; }
+  header { max-width: 1240px; margin: 0 auto; padding: 28px 16px 8px; display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; justify-content: space-between; }
+  h1 { margin: 0; font: 600 26px/1.2 "IBM Plex Mono", monospace; letter-spacing: -0.02em; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  .tag { margin: 6px 0 0; color: var(--muted); max-width: 640px; }
+  nav a { color: var(--ink); font-weight: 500; margin-left: 16px; text-decoration: none; border-bottom: 1px solid var(--line); }
+  nav a:hover { border-color: var(--ink); }
+  main { max-width: 1240px; margin: 0 auto; padding: 12px 16px 40px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } .editor { min-height: 360px; } }
+  html, body { overflow-x: hidden; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .bar .label { font-weight: 600; margin-right: auto; }
+  button, select { font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button:hover, select:hover { border-color: var(--muted); }
+  button[aria-pressed="true"] { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+  .editor { position: relative; display: flex; min-height: 520px; background: var(--code-bg); }
+  .gutter { padding: 12px 8px 12px 12px; text-align: right; color: var(--muted); font: 13px/1.6 "IBM Plex Mono", monospace; user-select: none; white-space: pre; border-right: 1px solid var(--line); min-width: 44px; }
+  .gutter .hit-error { color: var(--error); font-weight: 600; }
+  .gutter .hit-warn { color: var(--warn); font-weight: 600; }
+  textarea { flex: 1; min-width: 0; border: 0; outline: none; resize: none; padding: 12px; background: transparent; color: var(--ink); font: 13px/1.6 "IBM Plex Mono", monospace; tab-size: 2; white-space: pre; overflow: auto; }
+  .score { display: flex; align-items: center; gap: 16px; padding: 18px 16px; border-bottom: 1px solid var(--line); }
+  .ring { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; font: 600 22px "IBM Plex Mono", monospace; flex: none; }
+  .ring small { display: block; font-size: 11px; font-weight: 500; text-align: center; margin-top: -4px; }
+  .g-ok { background: var(--ok-bg); color: var(--ok); } .g-warn { background: var(--warn-bg); color: var(--warn); } .g-bad { background: var(--error-bg); color: var(--error); }
+  .counts { color: var(--muted); font-size: 14px; }
+  .counts b { color: var(--ink); }
+  .findings { list-style: none; margin: 0; padding: 6px 0; overflow: auto; max-height: 560px; }
+  .findings li { padding: 10px 16px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .findings li:hover { background: var(--code-bg); }
+  .sev { display: inline-block; font: 600 11px "IBM Plex Mono", monospace; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; margin-right: 6px; }
+  .sev.error { background: var(--error-bg); color: var(--error); } .sev.warn { background: var(--warn-bg); color: var(--warn); } .sev.info { background: var(--info-bg); color: var(--info); }
+  .where { font: 12px "IBM Plex Mono", monospace; color: var(--muted); }
+  .test { font-weight: 600; }
+  .msg { margin-top: 2px; }
+  .rule { font: 12px "IBM Plex Mono", monospace; color: var(--muted); }
+  .empty { padding: 24px 16px; color: var(--muted); }
+  .install { max-width: 1240px; margin: 0 auto; padding: 0 16px 48px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .install div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .install h2 { margin: 0 0 6px; font-size: 14px; }
+  .install p { margin: 0 0 8px; color: var(--muted); font-size: 14px; }
+  code { font: 13px "IBM Plex Mono", monospace; background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; word-break: break-all; }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 0 16px 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>hollowtest <span>playground</span></h1>
+    <p class="tag">Paste a test file. See which tests would pass even if the code were broken. Everything runs in your browser; nothing is sent anywhere.</p>
+  </div>
+  <nav><a href="https://github.com/jeffev/hollowtest">GitHub</a><a href="https://github.com/jeffev/hollowtest#what-it-catches">Rules</a></nav>
+</header>
+
+<main>
+  <section class="panel" aria-label="Test file">
+    <div class="bar">
+      <span class="label">Test file</span>
+      <select id="sample" aria-label="Load an example">
+        <option value="agent">Example: tests an agent wrote</option>
+        <option value="classic">Example: classic mistakes</option>
+        <option value="solid">Example: solid tests</option>
+      </select>
+      <button id="lang-ts" aria-pressed="true" title="Parse as TypeScript">TS</button>
+      <button id="lang-js" aria-pressed="false" title="Parse as JavaScript">JS</button>
+    </div>
+    <div class="editor">
+      <div class="gutter" id="gutter" aria-hidden="true"></div>
+      <textarea id="code" spellcheck="false" aria-label="Test source code"></textarea>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Results" aria-live="polite">
+    <div class="score">
+      <div class="ring" id="ring">–</div>
+      <div>
+        <div style="font-weight:600">Test integrity</div>
+        <div class="counts" id="counts">Paste a test to start.</div>
+      </div>
+    </div>
+    <ul class="findings" id="findings"></ul>
+  </section>
+</main>
+
+<section class="install" aria-label="Use it">
+  <div><h2>In your project</h2><p>JS, TS and Python. Zero config.</p><code>npx hollowtest</code></div>
+  <div><h2>Stop your agent writing them</h2><p>Claude Code plugin: a skill plus a hook that sends hollow tests back to the agent.</p><code>/plugin install hollowtest --marketplace jeffev/hollowtest</code></div>
+  <div><h2>Prove it</h2><p>Break the code on purpose and see which bugs no test notices.</p><code>npx hollowtest --mutate src/cart.ts</code></div>
+</section>
+<footer>MIT · <a href="https://github.com/jeffev/hollowtest" style="color:inherit">github.com/jeffev/hollowtest</a></footer>
+
+<script src="playground.js"></script>
+<script>
+const SAMPLES = {
+  agent: `// What an agent writes when asked to "add tests for checkout and make them pass".
+import { describe, it, expect, vi } from 'vitest';
+import { subtotal, applyCoupon, parseQuantity, fetchCart } from './checkout';
+
+describe('checkout', () => {
+  it('calculates the subtotal', () => {
+    const items = [{ sku: 'a', price: 10, qty: 2 }];
+    const result = subtotal(items);
+    expect(result).toBeDefined();
+  });
+
+  it('applies the HALF coupon', () => {
+    const total = applyCoupon(80, 'HALF');
+    expect(total).toEqual(total);
+  });
+
+  it('rejects an invalid quantity', () => {
+    try {
+      parseQuantity('abc');
+    } catch (e) {
+      expect((e as Error).message).toBe('invalid quantity');
+    }
+  });
+
+  it('loads the cart from the API', async () => {
+    const api = { get: vi.fn().mockResolvedValue([{ sku: 'a', price: 10, qty: 1 }]) };
+    expect(fetchCart('42', api)).resolves.toHaveLength(1);
+  });
+
+  it('calls the API', async () => {
+    const api = { get: vi.fn().mockResolvedValue([]) };
+    await fetchCart('42', api);
+    expect(api.get).toHaveBeenCalled();
+  });
+
+  it('handles an empty cart', () => {
+    subtotal([]);
+  });
+
+  it('parses a valid quantity', () => {
+    expect(parseQuantity('3')).toBe(3);
+  });
+});
+`,
+  classic: `import { it, expect, vi } from 'vitest';
+import { total, load } from './cart';
+
+vi.mock('./cart', () => ({ total: vi.fn(() => 6) }));
+
+it.only('sums the cart', () => {
+  expect(total([1, 2, 3])).toBe(6);
+});
+
+it('is never null', () => {
+  expect(total([1])).toBeNull;
+});
+
+it('waits for the cart', () => {
+  load().then((cart) => {
+    expect(cart.items).toHaveLength(2);
+  });
+});
+
+it('shows a discount', () => {
+  const t = total([200]);
+  if (t > 1000) {
+    expect(t).toBe(900);
+  }
+});
+
+it('still works', () => {
+  const t = total([1, 2]);
+  // expect(t).toBe(3);
+});
+
+it.skip('handles refunds', () => {
+  expect(total([-5])).toBe(0);
+});
+`,
+  solid: `import { describe, it, expect, vi } from 'vitest';
+import { subtotal, applyCoupon, parseQuantity, fetchCart } from './checkout';
+
+describe('checkout', () => {
+  it('multiplies price by quantity', () => {
+    expect(subtotal([{ sku: 'a', price: 10, qty: 2 }, { sku: 'b', price: 5, qty: 1 }])).toBe(25);
+  });
+
+  it('HALF halves totals above 50, and only those', () => {
+    expect(applyCoupon(80, 'HALF')).toBe(40);
+    expect(applyCoupon(50, 'HALF')).toBe(50);
+  });
+
+  it('rejects an invalid quantity', () => {
+    expect(() => parseQuantity('abc')).toThrow('invalid quantity');
+  });
+
+  it('loads the cart from the API', async () => {
+    const api = { get: vi.fn().mockResolvedValue([{ sku: 'a', price: 10, qty: 1 }]) };
+    await expect(fetchCart('42', api)).resolves.toHaveLength(1);
+    expect(api.get).toHaveBeenCalledWith('/carts/42');
+  });
+});
+`,
+};
+
+const code = document.getElementById('code');
+const gutter = document.getElementById('gutter');
+const list = document.getElementById('findings');
+const ring = document.getElementById('ring');
+const counts = document.getElementById('counts');
+const sample = document.getElementById('sample');
+const btnTs = document.getElementById('lang-ts');
+const btnJs = document.getElementById('lang-js');
+let lang = 'ts';
+
+function esc(s) { return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
+
+function lineOffset(text, line) {
+  let pos = 0;
+  for (let i = 1; i < line; i++) pos = text.indexOf('\n', pos) + 1;
+  return pos;
+}
+
+function render() {
+  const text = code.value;
+  let res;
+  try { res = window.hollowtest.analyze(text, lang === 'ts' ? 'playground.test.tsx' : 'playground.test.jsx'); }
+  catch (e) { list.innerHTML = `<li class="empty">Could not analyze: ${esc(String(e.message || e))}</li>`; return; }
+  const { file, summary } = res;
+  const items = [];
+  for (const x of file.fileFindings) items.push({ ...x, test: '' });
+  for (const t of file.tests) for (const x of t.findings) {
+    if (x.rule === 'mocked-subject' || (x.rule === 'focused-test' && x.message.startsWith('Will not run'))) continue;
+    items.push({ ...x, test: t.name });
+  }
+  items.sort((a, b) => a.line - b.line);
+  const marks = {};
+  for (const x of items) if (x.severity !== 'info') marks[x.line] = marks[x.line] === 'error' ? 'error' : x.severity;
+  const n = text.split('\n').length;
+  gutter.innerHTML = Array.from({ length: n }, (_, i) => marks[i + 1] ? `<span class="hit-${marks[i + 1]}">${i + 1}</span>` : String(i + 1)).join('\n');
+
+  if (file.parseError) { ring.className = 'ring'; ring.textContent = '!'; counts.textContent = 'Syntax error: ' + file.parseError; }
+  else if (!summary.tests) { ring.className = 'ring'; ring.textContent = '–'; counts.textContent = 'No it()/test() calls found yet.'; }
+  else {
+    const cls = summary.score >= 85 ? 'g-ok' : summary.score >= 70 ? 'g-warn' : 'g-bad';
+    ring.className = 'ring ' + cls;
+    ring.innerHTML = `<div>${summary.score}<small>${summary.grade}</small></div>`;
+    counts.innerHTML = `<b>${summary.tests}</b> tests · <b>${summary.hollow}</b> hollow · <b>${summary.weak}</b> weak · <b>${summary.healthy}</b> solid`;
+  }
+  list.innerHTML = items.length
+    ? items.map((x) => `<li data-line="${x.line}"><span class="sev ${x.severity}">${x.severity}</span><span class="where">line ${x.line}</span>${x.test ? ` · <span class="test">${esc(x.test)}</span>` : ''}<div class="msg">${esc(x.message)}</div><div class="rule">${x.rule}</div></li>`).join('')
+    : (summary.tests ? '<li class="empty">No hollow tests found. Every test here can fail.</li>' : '');
+}
+
+let timer;
+code.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(render, 150); });
+code.addEventListener('scroll', () => { gutter.scrollTop = code.scrollTop; });
+list.addEventListener('click', (e) => {
+  const li = e.target.closest('li[data-line]');
+  if (!li) return;
+  const line = Number(li.dataset.line);
+  const start = lineOffset(code.value, line);
+  const end = code.value.indexOf('\n', start);
+  code.focus();
+  code.setSelectionRange(start, end === -1 ? code.value.length : end);
+  code.scrollTop = Math.max(0, (line - 4) * 20.8);
+});
+sample.addEventListener('change', () => { code.value = SAMPLES[sample.value]; render(); });
+function setLang(l) { lang = l; btnTs.setAttribute('aria-pressed', String(l === 'ts')); btnJs.setAttribute('aria-pressed', String(l === 'js')); render(); }
+btnTs.addEventListener('click', () => setLang('ts'));
+btnJs.addEventListener('click', () => setLang('js'));
+code.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); const s = code.selectionStart; code.setRangeText('  ', s, code.selectionEnd, 'end'); render(); }
+});
+code.value = SAMPLES.agent;
+render();
+</script>
+</body>
+</html>
