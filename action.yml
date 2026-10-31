@@ -1,0 +1,24 @@
+name: hollowtest
+description: Find tests that test nothing (no assertions, tautologies, mocked subjects, swallowed errors, unawaited expects).
+branding:
+  icon: check-circle
+  color: red
+inputs:
+  paths:
+    description: Paths to scan
+    default: .
+  min-score:
+    description: Fail if the integrity score is below this (0-100)
+    default: ''
+  fail-on:
+    description: Fail on findings at this severity (error or warn)
+    default: error
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        args=""
+        [ -n "${{ inputs.min-score }}" ] && args="$args --min-score ${{ inputs.min-score }}"
+        [ -n "${{ inputs.fail-on }}" ] && args="$args --fail-on ${{ inputs.fail-on }}"
+        node "${{ github.action_path }}/bin/hollowtest.js" ${{ inputs.paths }} $args

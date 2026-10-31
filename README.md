@@ -1,0 +1,160 @@
+# hollowtest
+
+**Find tests that test nothing.**
+
+Coding agents are great at making tests pass. Sometimes they do it by writing tests that cannot fail: no assertions, `expect(x).toBe(x)`, a mock of the very module under test, an `expect` inside a `catch` that never runs, a `.resolves` nobody awaits. Coverage goes green. The bug ships.
+
+`hollowtest` reads your test files and flags those tests in seconds (7,400 tests of NestJS in about 3 s), then (optionally) breaks your code on purpose to prove which behavior no test notices. It ships with an agent skill so Claude Code, Codex and Cursor stop writing them in the first place.
+
+```bash
+npx hollowtest
+```
+
+```
+examples/checkout/checkout.test.ts
+  warn   checkout.test.ts:9   calculates the subtotal      Only weak checks (toBeDefined): almost any result passes.
+  error  checkout.test.ts:14  applies the HALF coupon      Compares a value with itself: `expect(total).toEqual(total)`.
+  error  checkout.test.ts:18  rejects an invalid quantity  The assertions live in `catch`; if the code stops throwing, this test still passes.
+  error  checkout.test.ts:27  loads the cart from the API  `toHaveLength` is asynchronous but not awaited or returned: the test finishes before it runs.
+  warn   checkout.test.ts:33  calls the API                Only weak checks (toHaveBeenCalled): almost any result passes.
+  error  checkout.test.ts:36  handles an empty cart        No assertions: this test passes as long as nothing throws.
+
+Test integrity  29/100  grade F
+7 tests in 1 files  ·  4 hollow  ·  2 weak  ·  1 solid
+```
+
+That is the real output for [`examples/checkout`](examples/checkout/checkout.test.ts): seven tests in the style agents write when asked to "add tests for checkout". All seven would pass.
+
+Zero config. Works with **Jest, Vitest, Mocha + Chai, node:test, ava, tap, Playwright, Testing Library, supertest** in JS and TS. One dependency (the Babel parser).
+
+## What it catches
+
+| Rule | Severity | Example |
+|---|---|---|
+| `no-assertions` | error | `it('works', () => { total(cart) })` |
+| `empty-test` | error | `it('handles errors', () => {})` |
+| `tautology` | error | `expect(result).toBe(result)`, `expect(true).toBe(true)` |
+| `bare-expect` | error | `expect(x)` with no matcher, or `expect(x).toBeNull` without `()` |
+| `swallowed-error` | error | `try { parse('') } catch (e) { expect(e.message)... }` passes when nothing throws |
+| `unawaited-assertion` | error | `expect(p).resolves.toBe(1)` without `await`; `expect` inside an un-awaited `.then()` or `setTimeout` |
+| `mocked-subject` | error | `cart.test.ts` that calls `vi.mock('./cart')` |
+| `focused-test` | error | `.only` left in: every other test in the file silently stops running |
+| `conditional-assertion` | warn | every `expect` sits behind an `if`, or in a loop over a list that may be empty |
+| `weak-assertions` | warn | only `toBeDefined()`, `toBeTruthy()`, `not.toBeNull()`, bare `toHaveBeenCalled()` |
+| `commented-assertion` | warn | `// expect(total).toBe(35)` |
+| `skipped-test` | warn | `it.skip(...)`, the classic way to "fix" a failing test |
+| `snapshot-only` | info | the only check is a snapshot that gets regenerated with `-u` |
+
+`npx hollowtest --rules` prints the list with explanations.
+
+It is careful about false positives. It understands helpers that assert (local, or imported from your test utils), Testing Library queries that throw (`getByText`), the mocha `done` callback contract, `expect.assertions(n)`, the `let threw = false` pattern, compile-time type tests (`expectTypeOf`, `Expect<Equal<A, B>>`, `@ts-expect-error`), loops over literal arrays, and "does not throw" smoke tests (reported as warnings, not errors).
+
+## The mutation check: proof, not opinion
+
+Static rules find tests that look hollow. `--mutate` proves it. It changes your code the way a real bug would (`>` becomes `>=`, `&&` becomes `||`, a condition is forced to `true`, a return value becomes `null`), runs only the tests that import that file, and restores the file.
+
+```bash
+npx hollowtest --mutate pricing.js
+```
+
+```
+hollowtest --mutate  1 source file(s), 1 test file(s), runner: node --test {files}
+....SSSSSS..S....
+
+  survived  pricing.js:11  > → >=
+            if (coupon === 'HALF' && total > 50) {
+  survived  pricing.js:11  === → !==
+            if (coupon === 'HALF' && total > 50) {
+  survived  pricing.js:11  && → ||
+            if (coupon === 'HALF' && total > 50) {
+  survived  pricing.js:12  / → *
+            return total / 2;
+  ...
+
+Mutation score  59%  10 of 17 breaking changes caught by a test, 7 slipped through
+```
+
+All seven survivors are in `discount()`, the one function whose test only checks `assert.ok(result)` ([`test/mutation-sample`](test/mutation-sample/pricing.test.js)). The well-tested functions next to it lose no mutants.
+
+Every survivor is a bug your tests would let through. It detects Vitest, Jest, Mocha, ava and node:test from `package.json`, or takes `--test-cmd "pnpm test {files}"`. Source files are restored after each mutant, and on Ctrl+C. If the process is killed, the next run restores them from `.hollowtest-restore.json`. Mark a line with `// hollowtest-ignore` to leave it alone.
+
+It samples 30 mutants by default (`--max-mutants 100` for more, `--seed` to vary the sample). It is a quick probe, not a replacement for [Stryker](https://stryker-mutator.io/) on a whole codebase.
+
+## Stop agents from writing hollow tests
+
+```bash
+npx hollowtest --install-skill
+```
+
+This adds [`skill/hollowtest/SKILL.md`](skill/hollowtest/SKILL.md) to `.claude/skills/`, where Claude Code loads it whenever it writes or fixes tests, and prints a short `AGENTS.md` block for Codex, Cursor, Copilot and others. The skill is the contract:
+
+- every test must fail if the behavior it names is broken;
+- never make a red test green by skipping it, commenting out or weakening the assertion, mocking the module under test, or pasting the actual output into the expected value;
+- run `npx hollowtest` on the tests you touched, and `--mutate` on important logic, before saying "tests pass".
+
+## In CI
+
+```bash
+npx hollowtest --min-score 90        # fail below a score
+npx hollowtest --fail-on error       # fail on any hollow test
+npx hollowtest --json > report.json  # machine-readable
+```
+
+On GitHub Actions it emits annotations, so findings appear inline on the pull request:
+
+```yaml
+- uses: actions/checkout@v4
+- uses: actions/setup-node@v4
+  with: { node-version: 22 }
+- run: npx hollowtest --fail-on error
+```
+
+## How hollow are popular projects?
+
+Well-maintained projects score high, as they should. The point is that even there, a few tests that cannot fail slip past review. These are real examples, not synthetic ones:
+
+| Project | Tests | Score | Hollow | Weak |
+|---|---:|---:|---:|---:|
+| [express](https://github.com/expressjs/express/tree/1c6f1b0) | 1,159 | 100 | 0 | 1 |
+| [date-fns](https://github.com/date-fns/date-fns/tree/a9739fb) | 2,900 | 100 | 6 | 0 |
+| [ky](https://github.com/sindresorhus/ky/tree/3541888) | 1,285 | 100 | 0 | 11 |
+| [TanStack Query](https://github.com/TanStack/query/tree/8be136b) | 4,818 | 100 | 0 | 15 |
+| [axios](https://github.com/axios/axios/tree/9d11464) | 1,585 | 99 | 10 | 18 |
+| [hono](https://github.com/honojs/hono/tree/17ad0e2) | 3,139 | 99 | 9 | 52 |
+| [zustand](https://github.com/pmndrs/zustand/tree/382d29c) | 228 | 98 | 0 | 11 |
+| [swr](https://github.com/vercel/swr/tree/8148ef0) | 411 | 96 | 13 | 4 |
+| [nest](https://github.com/nestjs/nest/tree/8d9dd9d) | 7,406 | 95 | 100 | 574 |
+| [zod](https://github.com/colinhacks/zod/tree/2554b70) | 2,693 | 93 | 134 | 246 |
+
+A few of the findings:
+
+- zod, [`number.test.ts:103`](https://github.com/colinhacks/zod/blob/2554b70/packages/zod/src/v3/tests/number.test.ts#L103): `expect(z.number().minValue).toBeNull;`. The matcher is never called, so the six lines in that test assert nothing.
+- zod, [`tuple.test.ts:9`](https://github.com/colinhacks/zod/blob/2554b70/packages/zod/src/v4/classic/tests/tuple.test.ts#L9): `expect(val).toEqual(val)`.
+- zod, [`error.test.ts:492`](https://github.com/colinhacks/zod/blob/2554b70/packages/zod/src/v3/tests/error.test.ts#L492): the expected error is asserted inside `catch`. If `parse` stopped throwing, the test would still pass. The same pattern appears in 53 zod tests.
+- swr, [`use-swr-local-mutation.test.tsx:320`](https://github.com/vercel/swr/blob/8148ef0/test/use-swr-local-mutation.test.tsx#L320): `expect(...).resolves.toBe('data')` without `await`. The test ends before the assertion runs.
+- nest, [`client-kafka.spec.ts:946`](https://github.com/nestjs/nest/blob/8d9dd9d/packages/microservices/test/client/client-kafka.spec.ts#L946): `.catch(err => expect(err)...)` on a promise the test never awaits.
+
+Most of nest's "weak" tests are the `it('should be defined', () => expect(service).toBeDefined())` stubs generated by its CLI. Reproduce any row with `npx hollowtest` at the linked commit.
+
+## Score
+
+Each test counts 1 if clean, 0.5 if its worst finding is a warning, 0.9 for info, and 0 if hollow or skipped. Todo placeholders are not counted. The score is the average × 100. Grades: A ≥ 95, B ≥ 85, C ≥ 70, D ≥ 50, F below.
+
+## Programmatic API
+
+```js
+import { analyzeProject, analyzeFile } from 'hollowtest';
+
+const { summary, files } = analyzeProject(['src']);
+console.log(summary.score, summary.hollow);
+```
+
+## Limits
+
+- JavaScript and TypeScript only for now. Python (pytest) is next.
+- Static analysis judges what it can see. A helper imported from a package it cannot read is reported as a warning, not an error.
+- It does not run your tests unless you pass `--mutate`.
+
+## License
+
+MIT

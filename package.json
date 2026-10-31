@@ -1,0 +1,41 @@
+{
+  "name": "hollowtest",
+  "version": "0.1.0",
+  "description": "Find tests that test nothing. Catches the hollow tests AI coding agents write: no assertions, tautologies, mocked subjects, swallowed errors, unawaited expects.",
+  "type": "module",
+  "bin": {
+    "hollowtest": "bin/hollowtest.js"
+  },
+  "exports": "./src/index.js",
+  "files": [
+    "bin",
+    "src",
+    "skill",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/analyze.test.js test/mutate.test.js",
+    "self-check": "node bin/hollowtest.js test/analyze.test.js test/mutate.test.js --min-score 95"
+  },
+  "keywords": [
+    "testing",
+    "test-quality",
+    "mutation-testing",
+    "jest",
+    "vitest",
+    "ai",
+    "coding-agents",
+    "claude-code",
+    "agent-skills",
+    "lint"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "author": "Jefferson Valandro",
+  "dependencies": {
+    "@babel/parser": "^7.29.12"
+  }
+}
