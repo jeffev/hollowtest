@@ -41,5 +41,8 @@
   "dependencies": {
     "@babel/parser": "^7.29.12"
   },
-  "homepage": "https://jeffev.github.io/hollowtest/"
+  "homepage": "https://jeffev.github.io/hollowtest/",
+  "devDependencies": {
+    "esbuild": "^0.25.10"
+  }
 }
