@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { analyzeFile } from './analyze.js';
 import { parseSource } from './ast.js';
 import { findAssertingFunctions } from './assertions.js';
@@ -17,6 +18,9 @@ const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'build', 'coverage
 const EXTS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts'];
 const FRAMEWORK_PKG = /^(vitest|@jest\/globals|jest|mocha|chai|node:test|node:assert|assert|ava|tap|uvu|@playwright\/test|bun:test|sinon|react|vue|svelte|@testing-library\/.*|msw|supertest|nock)(\/|$)/;
 const MAX_BYTES = 1_500_000;
+// pytest defaults (test_*.py, *_test.py) and Django's tests.py
+const PY_TEST = /(^|\/)(test_[^/]*|[^/]*_test|tests)\.py$/;
+const PY_IGNORED = new Set(['venv', '__pycache__', 'site-packages', '.tox', 'env', '.venv', 'migrations']);
 
 /** Find test files under the given paths (files are taken as-is). */
 export function discoverTestFiles(inputs, { include } = {}) {
@@ -28,11 +32,16 @@ export function discoverTestFiles(inputs, { include } = {}) {
     if (st.isFile()) { out.add(path.resolve(p)); return; }
     if (!st.isDirectory()) return;
     for (const ent of fs.readdirSync(p, { withFileTypes: true })) {
-      if (ent.isDirectory() && (ent.name.startsWith('.') || IGNORED_DIRS.has(ent.name))) continue;
+      if (ent.isDirectory() && (ent.name.startsWith('.') || IGNORED_DIRS.has(ent.name) || PY_IGNORED.has(ent.name))) continue;
+      if (ent.isDirectory() && fs.existsSync(path.join(p, ent.name, 'pyvenv.cfg'))) continue; // any virtualenv
       const full = path.join(p, ent.name);
       if (ent.isDirectory()) visit(full);
       else {
         const rel = path.relative(root, full).replace(/\\/g, '/');
+        if (rel.endsWith('.py')) {
+          if ((include ? re : PY_TEST).test(rel) && (include || !/(^|\/)(bench|benchmarks?|examples?|docs?_src)\//.test(rel))) out.add(path.resolve(full));
+          continue;
+        }
         if (!re.test(rel) || full.endsWith('.d.ts')) continue;
         if (!include && NOT_TESTS.test(rel) && !NAMED_TEST.test(rel)) continue;
         out.add(path.resolve(full));
@@ -51,7 +60,8 @@ export function discoverTestFiles(inputs, { include } = {}) {
 export function isTestFile(file) {
   const p = file.replace(/\\/g, '/');
   if (p.endsWith('.d.ts') || /\/node_modules\//.test(p)) return false;
-  if (NAMED_TEST.test(p)) return true;
+  if (NAMED_TEST.test(p) || PY_TEST.test(p)) return true;
+  if (p.endsWith('.py')) return false;
   return TEST_FILE.test(p) && !NOT_TESTS.test(p);
 }
 
@@ -194,13 +204,49 @@ export function analyzeProject(inputs, opts = {}) {
   const files = discoverTestFiles(inputs, opts);
   const resolveHelpers = makeHelperResolver(path.resolve(inputs[0] && fs.existsSync(inputs[0]) && fs.statSync(inputs[0]).isDirectory() ? inputs[0] : '.'));
   const results = [];
+  const rel = (file) => path.relative(opts.cwd || process.cwd(), file).replace(/\\/g, '/') || file;
+  const pyFiles = files.filter((f) => f.endsWith('.py'));
   for (const file of files) {
+    if (file.endsWith('.py')) continue;
     let code;
     try { code = fs.readFileSync(file, 'utf8'); } catch { continue; }
     if (code.length > MAX_BYTES) continue;
     const r = analyzeFile(code, file, { resolveHelpers });
-    r.file = path.relative(opts.cwd || process.cwd(), file).replace(/\\/g, '/') || file;
+    r.file = rel(file);
     if (r.tests.length || r.parseError) results.push(r);
   }
-  return { files: results, summary: summarize(results) };
+  let pythonMissing = 0;
+  if (pyFiles.length) {
+    const py = analyzePython(pyFiles, opts.cwd || process.cwd());
+    if (!py) pythonMissing = pyFiles.length;
+    else for (const r of py) { r.file = rel(r.file); if (r.tests.length || r.parseError) results.push(r); }
+  }
+  results.sort((a, b) => a.file.localeCompare(b.file));
+  const summary = summarize(results);
+  if (pythonMissing) summary.pythonMissing = pythonMissing;
+  return { files: results, summary };
+}
+
+let pythonCmd;
+/** A Python 3 interpreter: $HOLLOWTEST_PYTHON, python3, python, or the Windows launcher. */
+export function findPython() {
+  if (pythonCmd !== undefined) return pythonCmd;
+  const candidates = [process.env.HOLLOWTEST_PYTHON, 'python3', 'python', 'py'].filter(Boolean);
+  pythonCmd = null;
+  for (const c of candidates) {
+    const args = c === 'py' ? ['-3'] : [];
+    const r = spawnSync(c, [...args, '-c', 'import sys; print(sys.version_info[0] * 100 + sys.version_info[1])'], { encoding: 'utf8' });
+    if (r.status === 0 && Number(r.stdout.trim()) >= 308) { pythonCmd = { cmd: c, args }; break; }
+  }
+  return pythonCmd;
+}
+
+/** Run the stdlib-only Python analyzer on pytest/unittest files. Returns null if no Python 3.8+ is available. */
+export function analyzePython(files, cwd = process.cwd()) {
+  const py = findPython();
+  if (!py) return null;
+  const script = path.join(path.dirname(fileURLToPath(import.meta.url)), 'python', 'hollow_py.py');
+  const r = spawnSync(py.cmd, [...py.args, '-I', script], { input: JSON.stringify({ files, cwd }), encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+  if (r.status !== 0) throw new Error('Python analyzer failed: ' + (r.stderr || '').slice(-2000));
+  return JSON.parse(r.stdout);
 }

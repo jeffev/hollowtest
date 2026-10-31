@@ -128,11 +128,14 @@ export const RULES = [
     severity: 'warn',
     title: 'Assertions that may never run',
     why: 'If every assertion sits behind an `if` or inside a loop, the test passes when the branch is skipped or the list is empty.',
-    check({ assertions, constArrays }) {
+    check({ assertions, constArrays, fn }) {
       if (assertions.some((a) => a.kind === 'type')) return; // compile-time checks run regardless of the branch
       const rs = real(assertions).filter((a) => a.matcher !== 'throw' && !a.ancestors.some((n) => n.type === 'CatchClause'));
       if (!rs.length) return;
-      const reasons = rs.map((a) => conditionalReason(a, constArrays));
+      const nodes = new Set(rs.map((a) => a.node));
+      const params = new Set();
+      for (const p of fn.params) walk(p, (x) => { if (x.type === 'Identifier') params.add(x.name); });
+      const reasons = rs.map((a) => conditionalReason(a, constArrays, nodes, params));
       if (reasons.every(Boolean)) {
         return [{ line: line(rs[0].node), message: `Every assertion is ${reasons[0]}; when that never happens, the test passes without checking anything.` }];
       }
@@ -269,12 +272,20 @@ function floatingCallbackSink(a) {
   return null;
 }
 
-function conditionalReason(a, constArrays = new Set()) {
-  const nonEmpty = (n) => isNonEmptyLiteral(n) || (n?.type === 'Identifier' && constArrays.has(n.name)) || isObjectKeysOfConst(n, constArrays);
+function conditionalReason(a, constArrays = new Set(), nodes = new Set(), params = new Set()) {
+  // UPPER_CASE names are configuration constants (ROUTES, PROFILES): known data, not a maybe-empty result
+  const isConstName = (n) => (n?.type === 'Identifier' && /^[A-Z][A-Z0-9_]+$/.test(n.name)) || (n?.type === 'MemberExpression' && !n.computed && /^[A-Z][A-Z0-9_]+$/.test(n.property.name || ''));
+  const nonEmpty = (n) => isNonEmptyLiteral(n) || (n?.type === 'Identifier' && constArrays.has(n.name)) || isConstName(n) || isObjectKeysOfConst(n, constArrays) ||
+    (n?.type === 'CallExpression' && /^Object\.(keys|values|entries)$/.test(memberChain(n.callee).join('.')) && isConstName(n.arguments[0]));
   for (let i = a.ancestors.length - 1; i >= 0; i--) {
     const n = a.ancestors[i];
     const child = a.ancestors[i + 1] || a.node;
-    if (n.type === 'IfStatement' && child !== n.test) return 'inside an `if`';
+    if (n.type === 'IfStatement' && child !== n.test) {
+      // Parametrized case split (`if (expectError) ... else ...` on a test.each parameter), both paths
+      // asserting: fine. A runtime condition (`if (button)`) still lets the real check be skipped.
+      if (n.alternate && onlyParams(n.test, params) && containsAny(n.consequent, nodes) && containsAny(n.alternate, nodes)) continue;
+      return 'inside an `if`';
+    }
     if (n.type === 'ConditionalExpression' && child !== n.test) return 'inside a ternary';
     if (n.type === 'LogicalExpression' && child === n.right) return 'behind `&&`/`||`';
     if (n.type === 'SwitchCase') return 'inside a `switch` case';
@@ -330,4 +341,32 @@ function calledUnknownHelpers(fn, unknown) {
     }
   });
   return [...names];
+}
+
+function containsAny(root, nodes) {
+  let hit = false;
+  walk(root, (n) => {
+    if (hit) return false;
+    if (nodes.has(n)) hit = true;
+  });
+  return hit;
+}
+
+/** The condition depends only on test parameters (plus class names, `typeof`, Array.isArray). */
+function onlyParams(test, params) {
+  if (!params.size) return false;
+  let ok = true;
+  let any = false;
+  walk(test, (x, parent) => {
+    if (x.type === 'CallExpression') {
+      const c = memberChain(x.callee).join('.');
+      if (!/^(Array\.isArray|Number\.isNaN|isNaN|Boolean)$/.test(c)) ok = false;
+      return;
+    }
+    if (x.type === 'Identifier' && !(parent && (parent.type === 'MemberExpression' || parent.type === 'OptionalMemberExpression') && parent.property === x && !parent.computed)) {
+      if (params.has(x.name)) any = true;
+      else if (x.name !== 'undefined' && !/^[A-Z]/.test(x.name)) ok = false;
+    }
+  });
+  return ok && any;
 }

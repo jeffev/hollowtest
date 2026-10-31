@@ -47,6 +47,7 @@ export function formatSummary(s) {
     }
   }
   if (s.parseErrors) out.push(dim(`  (${s.parseErrors} files could not be parsed)`));
+  if (s.pythonMissing) out.push(yellow(`  ${s.pythonMissing} Python test file(s) skipped: no Python 3.8+ found (set HOLLOWTEST_PYTHON).`));
   return out.join('\n');
 }
 

@@ -129,3 +129,10 @@ test('"allows"/"válido" tests asserting not.toThrow are the spec, not weak', ()
   const r = analyzeFile(code, 'spec.test.js');
   assert.deepEqual(r.tests.map((t) => t.findings.map((f) => f.rule)), [[], [], ['weak-assertions']]);
 });
+
+test('if/else asserting on both paths: fine on a test parameter, flagged on a runtime lookup', () => {
+  const code = "it.each([[true], [false]])('case %s', (expectError) => {\n  if (expectError) { expect(() => f()).toThrow(); } else { expect(f()).toBe(1); }\n});\n" +
+    "it('closes', () => {\n  const btn = document.querySelector('x');\n  if (btn) { btn.click(); expect(onClose).toHaveBeenCalledTimes(1); } else { expect(screen.getByText('A')).toBeInTheDocument(); }\n});";
+  const r = analyzeFile(code, 'branch.test.js');
+  assert.deepEqual(r.tests.map((t) => t.findings.map((f) => f.rule)), [[], ['conditional-assertion']]);
+});
