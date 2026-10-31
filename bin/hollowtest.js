@@ -23,6 +23,7 @@ Options
   --fix                        Apply the safe mechanical fixes (missing (), await, .only, expect.assertions,
                                Python tuple asserts), then report what is left
   --dry-run                    With --fix: show what would change without writing
+  --badge                      Print a README badge (Markdown) with the score and grade
   --changed                    Only test files changed in the working tree (git)
   --base <ref>                 With --changed: also files changed since <ref>, e.g. origin/main
   --verbose                    Also show info-level findings
@@ -58,6 +59,7 @@ try {
       seed: { type: 'string' },
       changed: { type: 'boolean' },
       fix: { type: 'boolean' },
+      badge: { type: 'boolean' },
       'dry-run': { type: 'boolean' },
       base: { type: 'string' },
       rules: { type: 'boolean' },
@@ -121,6 +123,13 @@ if (o.fix) {
   console.log(total ? `
 ${o['dry-run'] ? 'Would apply' : 'Applied'} ${total} fix(es) in ${report.length} file(s).` : 'Nothing hollowtest can fix automatically.');
   if (!o['dry-run'] && total) result = analyzeProject(inputs, { include: o.include });
+}
+if (o.badge) {
+  const s = result.summary;
+  const color = { A: 'brightgreen', B: 'green', C: 'yellow', D: 'orange', F: 'red' }[s.grade] || 'lightgrey';
+  const label = s.score === null ? 'no tests' : `${s.score}/100 ${s.grade}`;
+  console.log(`[![test integrity: ${label}](https://img.shields.io/badge/test_integrity-${encodeURIComponent(label).replace(/-/g, '--')}-${color})](https://github.com/jeffev/hollowtest)`);
+  process.exit(0);
 }
 const format = o.json ? 'json' : o.format || (process.env.GITHUB_ACTIONS ? 'github' : 'text');
 if (format === 'json') console.log(toJSON(result));

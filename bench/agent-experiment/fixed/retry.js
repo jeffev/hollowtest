@@ -11,7 +11,7 @@ export async function retry(fn, { retries = 2, delayMs = 0 } = {}) {
       return await fn(attempt);
     } catch (err) {
       lastError = err;
-      if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
+      if (delayMs && attempt < retries) await new Promise((r) => setTimeout(r, delayMs));
     }
   }
   throw lastError;

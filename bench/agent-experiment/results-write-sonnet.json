@@ -1,0 +1,426 @@
+{
+  "model": "sonnet",
+  "date": "2026-10-31T23:31:40.277Z",
+  "results": [
+    {
+      "module": "businessDays",
+      "condition": "A",
+      "ms": 34057,
+      "result": "I wrote `businessDays.test.js` with 29 tests, and all of them pass with `node --test`. To get there I had to fix a one-character bug in `businessDays.js`.\n\n**The bug:** the weekend check was `day !== 0 && day !== 7`. `getUTCDay()` only returns 0–6, so Saturday (6) was being counted as a business day. For example, Mon→Mon returned 6 instead of 5. I changed it to `day !== 6`, which matches the doc comment (\"Monday to Friday\"). On my first run, the tests that failed were the ones covering this.\n\n**What the tests cover:**\n- **Empty ranges:** same date, end before start, and end one day before start all return 0.\n- **Single days:** each weekday returns 1, and Saturday and Sunday return 0.\n- **Boundaries:** start is inclusive and end is exclusive.\n- **Weekends:** Sat→Mon, Fri→Mon, Sat→Tue and Sun→Sat.\n- **Longer ranges:**\n  - Two full weeks give 10.\n  - A 28-day span gives 20 from any starting weekday.\n  - A full year gives 260 for 2023 and 262 for 2024.\n- **Calendar edges:** month and year boundaries, leap day, a non-leap February, and a US DST-change week, which should be unaffected because the function works in UTC.\n- **Purity:** repeated calls give the same result, and the return value is a number.\n\nI didn't test malformed input such as `'garbage'`. The doc comment doesn't say what should happen, so I didn't want to lock in an unspecified behavior.",
+      "cost": 0.14933880000000002,
+      "turns": 8,
+      "testFiles": [
+        "businessDays.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 25,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mutation": {
+        "score": 100,
+        "mutants": 8,
+        "survived": 0
+      },
+      "mentionsBug": true
+    },
+    {
+      "module": "coupon",
+      "condition": "A",
+      "ms": 23889,
+      "result": "I wrote `coupon.test.js`, but not all the tests pass. The failures come from a bug in `coupon.js`, not from the tests.\n\nThe doc comment says any unknown code must throw `RangeError('unknown coupon')`. The code on line 12 of `coupon.js` does `return total;` instead. So 6 tests fail: the 5 invalid-code cases (`BOGUS`, empty string, `'HALF '`, `' TENOFF'`, `HALFF`) and the \"throws regardless of total\" test. The `HALF` and `TENOFF` tests pass. They cover both boundaries (50 is exclusive, 30 is inclusive), values on each side of them, and case-insensitivity.\n\nI didn't change the tests to match the bug, and I didn't edit `coupon.js` since you only asked for tests. The fix is one line:\n\n```js\nthrow new RangeError('unknown coupon');\n```\n\nThat replaces the final `return total;`. Do you want me to make that change and re-run? I expect all the tests to pass afterwards.",
+      "cost": 0.118794,
+      "turns": 5,
+      "testFiles": [
+        "coupon.test.js"
+      ],
+      "srcChanged": false,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 10,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mutation": {
+        "score": 100,
+        "mutants": 16,
+        "survived": 0
+      },
+      "mentionsBug": true
+    },
+    {
+      "module": "paginate",
+      "condition": "A",
+      "ms": 48218,
+      "result": "I wrote 27 tests in `paginate.test.js`, and all 27 pass with `node --test`. To get there I had to fix a bug in `paginate.js`.\n\n**The bug:** `hasNext` was `page <= totalPages`, which is true for every valid page, including the last one. The doc comment says it should be true only when a later page exists. The first run failed on 5 tests: the last page, a single page, an empty list, an exact-fit last page, and the empty-list result shape. I changed it to `page < totalPages`, and I didn't touch anything else in the file. You didn't ask me to edit `paginate.js`, so check that change if you'd rather handle it yourself.\n\n**What the tests cover:**\n- **Defaults:** page 1 with 10 items per page.\n- **`items`:** first, middle, partial-last and exact-fit pages. They also check that `perPage` larger than the list returns everything, and that the input list isn't mutated.\n- **`totalPages`:** rounding up, exact division, and a minimum of 1 for an empty list.\n- **`hasNext` and `hasPrev`:** the first, middle and last pages, a single page, and an empty list.\n- **Result shape:** the exact set of keys, and the full object for an empty list.\n- **Out-of-range pages:** page 0, a negative page, a page past the end, and an empty list with page 0 or 2. Each throws `RangeError` with the message `page out of range`, and the last valid page doesn't throw.\n\nI didn't test non-integer pages, `NaN`, or a `perPage` of 0 or less. The doc comment doesn't say what should happen there. For example, `perPage = 0` makes `totalPages` infinite, so the function throws on any page past 1 and the result is meaningless. If you want those inputs rejected, that's a separate change.",
+      "cost": 0.14737630000000002,
+      "turns": 8,
+      "testFiles": [
+        "paginate.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 27,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mutation": {
+        "score": 100,
+        "mutants": 17,
+        "survived": 0
+      },
+      "mentionsBug": true
+    },
+    {
+      "module": "password",
+      "condition": "A",
+      "ms": 45825,
+      "result": "I wrote 21 tests in `password.test.js`, and all 21 pass under `node --test`. I also changed `password.js`, which you didn't ask for.\n\n**Bug fix:** `password.js` had `pw.length < 7`, so a 7-character password like `Abcdef1` was accepted even though the doc comment requires at least 8. That made the test \"7 characters is too short\" fail. I changed it to `pw.length < 8`, and I checked the test failed before the change and passes after. If you'd rather keep the 7-character limit, the doc comment is what needs to change, and the 7-versus-8 length tests would need adjusting too.\n\n**What the tests cover:**\n- **Valid passwords:** short and long passwords that meet every rule.\n- **Length:** 7, 8 and 9 characters, plus the empty string.\n- **Digit rule:** missing digit, digit at the start, middle and end, every digit 0–9, and symbols not counting as digits.\n- **Uppercase rule:** missing uppercase, uppercase at different positions, and digits or symbols not counting as uppercase.\n- **Multiple errors:** each pair of broken rules and all three together, in the documented order and with the exact messages.\n- **Result object:** `valid` is true only when `errors` is empty, and each call returns a fresh object.\n- **Other edge cases:** non-ASCII uppercase like `Á` doesn't count, since the rule only matches A–Z, and whitespace counts toward length.\n\nThe function doesn't handle `null`, `undefined` or non-string input; it would throw on `pw.length`. I didn't test that because the doc comment doesn't say what should happen.",
+      "cost": 0.1486166,
+      "turns": 9,
+      "testFiles": [
+        "password.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 21,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mutation": {
+        "score": 100,
+        "mutants": 9,
+        "survived": 0
+      },
+      "mentionsBug": true
+    },
+    {
+      "module": "retry",
+      "condition": "A",
+      "ms": 35744,
+      "result": "I wrote 18 tests in `retry.test.js`, and they all pass with `node --test`. I also had to change `retry.js`, because it didn't match its doc comment.\n\n**Bugs in `retry.js`:**\n1. **Off-by-one:** the loop ran `attempt < retries`, so `fn` ran `retries` times instead of `retries + 1`. With `retries: 0` it never ran `fn` and threw `undefined`. With the default of 2, it made 2 attempts instead of 3.\n2. **Extra delay:** it slept `delayMs` after the final failed attempt, which delays the rejection for no reason. The doc says the wait is *between* attempts.\n\n**Fix:** the loop is now `attempt <= retries`, and the delay only runs when `attempt < retries`. Please check that you want these edits to the source. If you'd rather keep the original behavior, those tests would need to change instead.\n\nThe tests cover:\n- first-try success, retrying then succeeding, and succeeding on the last allowed attempt\n- the default of 2 retries (3 attempts), the `retries + 1` cap, and `retries: 0`\n- rejecting with the last error, and keeping the identity of thrown values, including non-Errors\n- passing the zero-based attempt number to `fn`\n- synchronous throws and non-async functions\n- the delay: waiting between attempts, no wait on first-try success, no wait after the final failure, and no wait when `delayMs` is 0\n\nThe delay tests use real timers with a small tolerance, so they are mildly timing-sensitive.",
+      "cost": 0.15357679999999999,
+      "turns": 8,
+      "testFiles": [
+        "retry.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 18,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mentionsBug": true,
+      "note": "Re-evaluated after correcting fixed/retry.js: the agent found a second real bug (a delay after the last attempt) that the first reference implementation still had."
+    },
+    {
+      "module": "shipping",
+      "condition": "A",
+      "ms": 25307,
+      "result": "I wrote `shipping.test.js` with 10 tests, and all 10 pass under `node --test`. To get them passing I also had to change `shipping.js`.\n\n**Bug fixed in `shipping.js`:** the doc comment says domestic orders of 100 or more ship free, but the code used `total > 100`. An order of exactly 100 was charged 15. I changed it to `total >= 100`, and the boundary tests failed before the change and pass after. If you would rather keep the old behavior, the doc comment is what needs to change.\n\n**What the tests cover:**\n- **Domestic:**\n  - Totals below 100 pay 15 (50 and 99.99).\n  - A total of exactly 100 ships free.\n  - Totals above 100 ship free.\n  - A total of 0 pays 15.\n  - Omitting the country behaves as `'BR'`.\n- **International:** non-`'BR'` countries always pay 40, at totals from 0 to 5000. Country codes are case-sensitive, so `'br'` pays 40.\n- **Invalid input:** a negative total throws `RangeError` with the message `total must be >= 0`, for both domestic and international orders.",
+      "cost": 0.048990599999999995,
+      "turns": 7,
+      "testFiles": [
+        "shipping.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 10,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mutation": {
+        "score": 100,
+        "mutants": 12,
+        "survived": 0
+      },
+      "mentionsBug": true
+    },
+    {
+      "module": "slugify",
+      "condition": "A",
+      "ms": 30246,
+      "result": "I wrote `slugify.test.js` with 18 tests, and all 18 pass under `node --test`. Getting there meant fixing a bug in `slugify.js`, which you didn't ask me to touch.\n\n**The bug:** `slugify.js` trimmed hyphens and then cut the result to 30 characters. If the cut landed right after a hyphen, the slug ended in `-`. For example, 29 `a`s followed by ` bbb` came out as `aaaa…a-`. That breaks the doc comment's \"no trailing '-' after cutting\" rule. My truncation tests caught it.\n\n**The fix:** one line in `slugify.js`. It now strips trailing hyphens after the cut: `base.slice(0, 30).replace(/-+$/, '')`. If you'd rather keep the source as it was, revert that line. Two truncation tests will then fail.\n\n**What the tests cover:**\n- Lowercasing, accent removal (including precomposed vs. decomposed forms), and collapsing runs of separators.\n- Digits, leading/trailing trimming, empty or symbol-only input, non-Latin characters, and idempotence.\n- The 30-character limit: below, at and above it, with cuts landing on or inside a separator, and a sweep over many cut points.",
+      "cost": 0.1359937,
+      "turns": 7,
+      "testFiles": [
+        "slugify.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 18,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mutation": {
+        "score": 100,
+        "mutants": 2,
+        "survived": 0
+      },
+      "mentionsBug": true
+    },
+    {
+      "module": "splitBill",
+      "condition": "A",
+      "ms": 28561,
+      "result": "I wrote `splitBill.test.js`, but the tests don't all pass, because `splitBill.js` has a bug. I didn't change the implementation or loosen the tests to get a green run.\n\n**The bug:** the code in `splitBill.js:10-11` gives every person `Math.round(totalCents / people)`. That breaks both rules in the doc comment:\n- **Remainder:** it never hands out the leftover cents to the first people. `splitBill(100, 3)` returns `[33, 33, 33]` (sum 99) instead of `[34, 33, 33]`.\n- **Rounding up:** it can also overshoot the total. `splitBill(1_000_000_007, 6)` sums to `1000000008`.\n\n**The tests:** they cover:\n- the documented example, even splits, a single person, a zero total, and a total smaller than the number of people;\n- remainders of different sizes;\n- an exhaustive property check over totals 0–200 and 1–12 people: the parts sum to the total, differ by at most 1, never increase, and are integers;\n- a large total;\n- `RangeError` for invalid `people` (0, -1, 1.5, NaN, Infinity, `'3'`, null, undefined).\n\nI only read the tail of the run output, so I can't give you the exact pass/fail counts. The one failure I saw was the large-total sum above. The first-person-gets-the-extra-cent tests should fail too, since the code can't produce `[34, 33, 33]`.\n\n**A fix** would be:\n```js\nconst base = Math.floor(totalCents / people);\nconst extra = totalCents % people;\nreturn Array.from({ length: people }, (_, i) => base + (i < extra ? 1 : 0));\n```\nDo you want me to apply it and re-run? I'd expect the whole suite to pass after that.",
+      "cost": 0.12702990000000003,
+      "turns": 6,
+      "testFiles": [
+        "splitBill.test.js"
+      ],
+      "srcChanged": false,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 11,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mutation": {
+        "score": 100,
+        "mutants": 13,
+        "survived": 0
+      },
+      "mentionsBug": true
+    },
+    {
+      "module": "businessDays",
+      "condition": "B",
+      "ms": 38351,
+      "result": "I wrote 30 tests in `businessDays.test.js`, and all of them pass with `node --test`. To get there I also had to fix a bug in `businessDays.js`.\n\n**The bug:** `businessDays.js` checked `day !== 7` to skip weekends, but `getUTCDay()` returns 0–6. Saturday (6) was therefore being counted as a business day. The tests failed on it at first. For example, March 2024 gave 26 instead of 21. I changed it to `day !== 6`, which is the only edit to that file.\n\nThe tests cover:\n- **Empty ranges:** same date, or end before start, returns 0.\n- **Boundaries:** the start date is counted and the end date is not.\n- **Weekends:** Saturday and Sunday are never counted.\n- **Longer spans:** full weeks, multi-week ranges and whole years (2023 has 260 business days, 2024 has 262).\n- **Calendar edges:** month, year and leap-day boundaries.\n- **UTC behaviour:** results don't change across daylight-saving periods.\n- **Holidays:** they are ignored, as the doc comment says.\n- **Properties:** the count for a range equals the sum of its two halves, and the result is never negative.",
+      "cost": 0.15816270000000002,
+      "turns": 10,
+      "testFiles": [
+        "businessDays.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": null,
+      "mutation": null,
+      "mentionsBug": true
+    },
+    {
+      "module": "coupon",
+      "condition": "B",
+      "ms": 27828,
+      "result": "I wrote `coupon.test.js` with 19 tests, and they all pass under `node --test`. To get there I had to change `coupon.js`, which you didn't ask for.\n\n**The bug:** `applyCoupon` ended with `return total;`, so an unknown code came back unchanged. Its doc comment says it must throw `RangeError('unknown coupon')`. My unknown-code tests failed on that. I replaced the line with `throw new RangeError('unknown coupon');`. If you'd rather keep the old behaviour and change the spec, revert that line and the unknown-code tests will fail again.\n\n**What the tests cover:**\n- **`HALF`:** halves totals above 50, leaves exactly 50 and anything below unchanged, and handles totals just above and below the boundary.\n- **`TENOFF`:** takes 10 off at 30 and above, with exactly 30 included, and leaves lower totals unchanged.\n- **Case-insensitivity:** mixed-case variants of both codes.\n- **Unknown codes:** an empty string, `FOO`, `HALFF`, and codes with leading or trailing spaces all throw a `RangeError` with the exact message. An unknown code also throws when the total is tiny.\n\nThe tests treat codes with stray spaces, like `'HALF '`, as unknown, because the doc comment doesn't say to trim them.",
+      "cost": 0.1291721,
+      "turns": 7,
+      "testFiles": [
+        "coupon.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": null,
+      "mutation": null,
+      "mentionsBug": true
+    },
+    {
+      "module": "paginate",
+      "condition": "B",
+      "ms": 32418,
+      "result": "I wrote 22 tests in `paginate.test.js`, and they all pass under `node --test`. To get them passing I also changed `paginate.js`, which you didn't ask for.\n\n**The bug:** `hasNext` was `page <= totalPages`. That is true for every valid page, so the last page reported a next page. The doc comment says it should be true only when a later page exists. I changed it to `page < totalPages` (`paginate.js:16`). Four of the tests failed before the fix, including \"hasNext is false exactly on the last page when evenly divisible\". If you wanted the code left alone, revert that one line and those tests will fail again.\n\n**What the tests cover:**\n- **Basic behavior:** default arguments, first, middle and partial last pages, a custom `perPage`, and that the input list isn't mutated.\n- **`totalPages`:** an empty list, exact multiples, rounding up, and a single item.\n- **`hasNext` / `hasPrev`:** the empty list, a single page, and each boundary.\n- **Out-of-range pages:** page 0, negative pages, a page past the end, and page 2 of an empty list. Each throws a `RangeError`, and one test checks the message `page out of range`.\n- **Edge cases:** `perPage` of 1, `perPage` larger than the list, and object items.\n\nI didn't test non-integer or non-numeric `page` and `perPage` values, such as `perPage` of 0 or a fractional page. The doc comment doesn't say what should happen there.",
+      "cost": 0.1449032,
+      "turns": 8,
+      "testFiles": [
+        "paginate.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 22,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mutation": {
+        "score": 100,
+        "mutants": 17,
+        "survived": 0
+      },
+      "mentionsBug": true
+    },
+    {
+      "module": "password",
+      "condition": "B",
+      "ms": 35362,
+      "result": "I wrote 24 tests in `password.test.js`, and all 24 pass with `node --test`. I did have to change `password.js` to get there.\n\n**Bug in `password.js`:** line 11 checked `pw.length < 7`, but the doc comment requires at least 8 characters, so 7-character passwords were accepted. My boundary test caught it, and I changed it to `< 8`. If 7 was intended, the doc comment is what's wrong, and you'd need to revert that line and the 7-character test.\n\n**Coverage:**\n- **Valid passwords:** typical, long, with symbols or spaces, and with the digit or uppercase letter at either end.\n- **Length rule:** 7 characters is rejected, 8 is accepted, and the empty string gets all three errors.\n- **Digit and uppercase rules:** each is tested on its own.\n- **Several broken rules at once:** the errors come back in the documented order.\n- **Result shape:** `valid` is true only when `errors` is empty, and each call returns a new `errors` array.\n- **Non-ASCII input:** accented capitals and non-ASCII digits don't count as uppercase letters or digits, because the code uses `[A-Z]` and `\\d`.\n- **`null` and `undefined`:** both throw a `TypeError`.\n\nThe last two groups check what the code does today rather than anything the doc comment states. If you want accented capitals accepted, or `null` and `undefined` handled without throwing, those tests will need to change along with the code.",
+      "cost": 0.1463477,
+      "turns": 8,
+      "testFiles": [
+        "password.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 24,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mutation": {
+        "score": 100,
+        "mutants": 9,
+        "survived": 0
+      },
+      "mentionsBug": true
+    },
+    {
+      "module": "retry",
+      "condition": "B",
+      "ms": 40194,
+      "result": "I wrote 20 tests in `retry.test.js`, and all 20 pass with `node --test`. To get them passing I had to change `retry.js`, because the tests failed against the original code.\n\n**Two bugs in `retry.js` (the doc comment is the spec)**\n- **Too few attempts:** the loop used `attempt < retries`, so `fn` ran `retries` times instead of the documented `retries + 1`. The default of 2 gave 2 attempts, not 3. With `retries: 0` it never called `fn` and threw `undefined`.\n- **Trailing delay:** it slept `delayMs` after the final failed attempt, but the doc says the wait is only *between* attempts.\n\n**The fix:** two small edits in `retry.js`:\n- The loop condition is now `attempt <= retries`.\n- The delay is skipped on the last attempt (`delayMs && attempt < retries`).\n\nIf you'd rather keep the old behavior and update the doc comment instead, tell me and I'll adjust the tests to match.\n\n**What the tests cover**\n- **Basics:** the first-try success path, and the zero-based attempt index passed to `fn`.\n- **Attempt counts:** the default of 3 attempts, and `retries + 1` for several values.\n- **`retries: 0`:** it runs once, and returns or rejects with that result.\n- **Errors:** the last error is the one rejected, with identity preserved, including non-Error values.\n- **Sync throws and falsy results:** synchronous throws are retried, and falsy results (`0`, `''`, `null`, `undefined`, `false`) are returned as-is without retrying.\n- **Delay timing:** `delayMs` is honored between attempts, there's no trailing wait, and there's no wait on success or with `retries: 0`.\n- **Options handling:** a missing options object and partial options both fall back to defaults.\n\nThe timing tests use loose bounds (for example 45 ms for a 50 ms delay) to tolerate timer jitter.",
+      "cost": 0.1566284,
+      "turns": 8,
+      "testFiles": [
+        "retry.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 20,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mentionsBug": false,
+      "note": "Re-evaluated after correcting fixed/retry.js: the agent found a second real bug (a delay after the last attempt) that the first reference implementation still had."
+    },
+    {
+      "module": "shipping",
+      "condition": "B",
+      "ms": 26922,
+      "result": "Os testes não passam todos: 17 de 19 passam e 2 falham. Eles falham por causa de um bug em `shipping.js`, então não mexi nos testes nem no código.\n\n**O bug:** `shipping.js:11` usa `total > 100`, mas o comentário do arquivo diz que pedidos nacionais de **100 ou mais** têm frete grátis. Um pedido de exatamente 100 em `'BR'` paga 15 em vez de 0.\n\nOs dois testes que falham são:\n- `ships free at exactly 100 (threshold is inclusive)`\n- `defaults country to BR`, que usa o valor 100 em uma das verificações\n\nA correção é trocar `>` por `>=` na linha 11. Não alterei o código, porque você pediu só os testes e a regra de negócio é sua. Se o limite exclusivo for o comportamento desejado, o comentário e os testes é que precisam mudar. Quer que eu aplique a correção e rode os testes de novo?\n\nOs testes estão em `shipping.test.js` e cobrem:\n- **Frete nacional:** 0, 50, 99.99, 100, 100.01 e valores grandes, além do país padrão `'BR'`.\n- **Frete internacional:** sempre 40, inclusive em 0, 100 e valores enormes, e `'br'` em minúsculas não conta como nacional.\n- **Totais negativos:** lançam `RangeError` com a mensagem documentada, inclusive em pedidos internacionais e com `-Infinity`. O zero não lança erro.",
+      "cost": 0.0469623,
+      "turns": 5,
+      "testFiles": [
+        "shipping.test.js"
+      ],
+      "srcChanged": false,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 19,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mutation": {
+        "score": 100,
+        "mutants": 12,
+        "survived": 0
+      },
+      "mentionsBug": true
+    },
+    {
+      "module": "slugify",
+      "condition": "B",
+      "ms": 29998,
+      "result": "I wrote 15 tests in `slugify.test.js`, and all of them pass with `node --test`. Two of them first failed because of a bug in `slugify.js`, which I fixed.\n\n**The bug:** `slugify.js` cut the slug to 30 characters with `slice(0, 30)` and stopped there. If the 30th character was a `-`, the slug ended in a hyphen. The doc comment says that must not happen. For example, `'a'.repeat(29) + ' bbb'` produced `'aaaa…a-'`.\n\n**The fix:** I added a `.replace(/-+$/, '')` after the slice. You only asked for tests, so check that you're happy with the change to the source.\n\n**What the tests cover:**\n- lowercasing and accent removal (`Ação` → `acao`)\n- runs of non-alphanumeric characters collapsing to one hyphen\n- digits being kept\n- leading and trailing separators being stripped\n- empty, whitespace-only, symbol-only and non-Latin input\n- slugs that are already valid staying unchanged\n- running `slugify` twice giving the same result as running it once\n- the 30-character limit: exactly 30, over 30, a cut landing just after a hyphen, a cut landing just before one, and long messy input",
+      "cost": 0.1339593,
+      "turns": 7,
+      "testFiles": [
+        "slugify.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 15,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mutation": {
+        "score": 100,
+        "mutants": 2,
+        "survived": 0
+      },
+      "mentionsBug": true
+    },
+    {
+      "module": "splitBill",
+      "condition": "B",
+      "ms": 32044,
+      "result": "I wrote the tests in `splitBill.test.js`, and all 12 pass under `node --test`. To get there I had to change `splitBill.js`, which you didn't ask for.\n\n**The bug:** `splitBill.js` didn't do what its doc comment says. It gave everyone `Math.round(total / people)`, so `splitBill(100, 3)` returned `[33, 33, 33]` instead of `[34, 33, 33]`. The parts didn't add up to the total, and a total like `1000000007` came out as `1000000008`. My first run of the tests against the original code failed for this reason.\n\n**The fix:** each person gets `Math.floor(total / people)`, and the first `total % people` people get one extra cent. The input validation is unchanged. If you'd rather keep the original code, say so and I'll revert it, but the tests will fail against it.\n\n**What the tests cover:**\n- The documented `100 / 3` example, plus even splits, a single person, a zero total, and a total smaller than the number of people.\n- Remainders of 1 and 2 (`101 / 3`, `10 / 4`), and a large total.\n- A sweep of totals 0–200 across 1–12 people. For each combination it checks that the length is right, the parts sum to the total, they differ by at most 1 cent, they're integers, and the extra cents go to the first people.\n- A `RangeError` for invalid `people` (`0`, `-1`, `1.5`, `NaN`, `Infinity`, `'3'`, `null`, `undefined`), and the error message text.\n\nI didn't test invalid `totalCents` (negative or non-integer values), because the doc comment doesn't say what should happen then.",
+      "cost": 0.1378855,
+      "turns": 8,
+      "testFiles": [
+        "splitBill.test.js"
+      ],
+      "srcChanged": true,
+      "onBuggy": "fail",
+      "onFixed": "pass",
+      "verdict": "caught the bug",
+      "static": {
+        "score": 100,
+        "tests": 12,
+        "hollow": 0,
+        "weak": 0,
+        "byRule": {}
+      },
+      "mutation": {
+        "score": 100,
+        "mutants": 13,
+        "survived": 0
+      },
+      "mentionsBug": true
+    }
+  ]
+}

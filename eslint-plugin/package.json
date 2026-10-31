@@ -1,0 +1,14 @@
+{
+  "name": "eslint-plugin-hollowtest",
+  "version": "0.1.0",
+  "description": "ESLint rules for tests that test nothing: no assertions, tautologies, swallowed errors, unawaited expects, mocked subjects. Powered by hollowtest.",
+  "type": "module",
+  "main": "index.js",
+  "exports": "./index.js",
+  "files": ["index.js", "README.md"],
+  "keywords": ["eslint", "eslintplugin", "eslint-plugin", "testing", "jest", "vitest", "test-quality"],
+  "peerDependencies": { "eslint": ">=9" },
+  "dependencies": { "hollowtest": "^0.2.0" },
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/jeffev/hollowtest", "directory": "eslint-plugin" }
+}

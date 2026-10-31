@@ -143,6 +143,28 @@ On GitHub Actions it emits annotations, so findings appear inline on the pull re
 - run: npx hollowtest --fail-on error
 ```
 
+## In your editor (ESLint)
+
+```bash
+npm i -D eslint-plugin-hollowtest
+```
+
+```js
+// eslint.config.js
+import hollowtest from 'eslint-plugin-hollowtest';
+export default [hollowtest.configs.recommended];
+```
+
+Every rule shows up as `hollowtest/<rule>`, and `eslint --fix` applies the same safe fixes. See [`eslint-plugin/`](eslint-plugin/).
+
+## Badge
+
+```bash
+npx hollowtest --badge
+```
+
+prints a Markdown badge with your score, like [![test integrity: 100/100 A](https://img.shields.io/badge/test_integrity-100%2F100%20A-brightgreen)](https://github.com/jeffev/hollowtest).
+
 ## How hollow are popular projects?
 
 Well-maintained projects score high, as they should. The point is that even there, a few tests that cannot fail slip past review. These are real examples, not synthetic ones:
