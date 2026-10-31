@@ -1,0 +1,10 @@
+{
+  "name": "hollowtest",
+  "version": "0.2.0",
+  "description": "Stops coding agents from writing tests that test nothing. Every test file the agent writes is checked on the spot; hollow tests are sent back to the agent to fix.",
+  "author": { "name": "Jefferson Valandro", "url": "https://github.com/jeffev" },
+  "homepage": "https://github.com/jeffev/hollowtest",
+  "repository": "https://github.com/jeffev/hollowtest",
+  "license": "MIT",
+  "keywords": ["testing", "test-quality", "hooks", "skills"]
+}

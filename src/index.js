@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { analyzeFile } from './analyze.js';
 import { parseSource } from './ast.js';
 import { findAssertingFunctions } from './assertions.js';
@@ -44,6 +45,27 @@ export function discoverTestFiles(inputs, { include } = {}) {
     visit(i);
   }
   return [...out].sort();
+}
+
+/** Is this path a test file by the default conventions? (Used by the agent hook and --changed.) */
+export function isTestFile(file) {
+  const p = file.replace(/\\/g, '/');
+  if (p.endsWith('.d.ts') || /\/node_modules\//.test(p)) return false;
+  if (NAMED_TEST.test(p)) return true;
+  return TEST_FILE.test(p) && !NOT_TESTS.test(p);
+}
+
+/** Test files changed in the working tree (and since `base`, if given), via git. */
+export function changedTestFiles(base, cwd = process.cwd()) {
+  const run = (args) => {
+    const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
+    if (r.status !== 0) throw new Error(`git ${args.join(' ')} failed: ${(r.stderr || '').trim()}`);
+    return r.stdout.split('\n').map((s) => s.trim()).filter(Boolean);
+  };
+  const top = run(['rev-parse', '--show-toplevel'])[0];
+  const names = new Set([...run(['diff', '--name-only', 'HEAD']), ...run(['ls-files', '--others', '--exclude-standard'])]);
+  if (base) for (const n of run(['diff', '--name-only', `${base}...HEAD`])) names.add(n);
+  return [...names].map((n) => path.resolve(top, n)).filter((f) => fs.existsSync(f) && isTestFile(f));
 }
 
 export function resolveImport(fromFile, spec) {

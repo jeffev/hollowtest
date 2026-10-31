@@ -1,6 +1,6 @@
 {
   "name": "hollowtest",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Find tests that test nothing. Catches the hollow tests AI coding agents write: no assertions, tautologies, mocked subjects, swallowed errors, unawaited expects.",
   "type": "module",
   "bin": {
@@ -10,7 +10,9 @@
   "files": [
     "bin",
     "src",
-    "skill",
+    "skills",
+    "hooks",
+    ".claude-plugin",
     "README.md",
     "LICENSE"
   ],

@@ -82,11 +82,28 @@ It samples 30 mutants by default (`--max-mutants 100` for more, `--seed` to vary
 
 ## Stop agents from writing hollow tests
 
+**Claude Code plugin** (skill + hook):
+
+```
+/plugin install hollowtest --marketplace jeffev/hollowtest
+```
+
+The hook runs after every `Write`/`Edit` of a test file. If the agent just wrote a hollow test, the findings go straight back to it, and it fixes the test before moving on:
+
+```
+hollowtest: 1 hollow test problem(s) in math.test.js. These tests would pass even if the code were broken:
+- line 3 "adds" [no-assertions] No assertions: this test passes as long as nothing throws.
+```
+
+That is a real transcript: the agent then rewrote the test as `assert.equal(add(1, 2), 3)` on its own. Set `HOLLOWTEST_HOOK=off` to pause it.
+
+**Skill only**, for any project:
+
 ```bash
 npx hollowtest --install-skill
 ```
 
-This adds [`skill/hollowtest/SKILL.md`](skill/hollowtest/SKILL.md) to `.claude/skills/`, where Claude Code loads it whenever it writes or fixes tests, and prints a short `AGENTS.md` block for Codex, Cursor, Copilot and others. The skill is the contract:
+This adds [`skills/hollowtest/SKILL.md`](skills/hollowtest/SKILL.md) to `.claude/skills/`, where Claude Code loads it whenever it writes or fixes tests, and prints a short `AGENTS.md` block for Codex, Cursor, Copilot and others. The skill is the contract:
 
 - every test must fail if the behavior it names is broken;
 - never make a red test green by skipping it, commenting out or weakening the assertion, mocking the module under test, or pasting the actual output into the expected value;
@@ -97,6 +114,7 @@ This adds [`skill/hollowtest/SKILL.md`](skill/hollowtest/SKILL.md) to `.claude/s
 ```bash
 npx hollowtest --min-score 90        # fail below a score
 npx hollowtest --fail-on error       # fail on any hollow test
+npx hollowtest --changed --base origin/main   # only test files touched in this branch
 npx hollowtest --json > report.json  # machine-readable
 ```
 

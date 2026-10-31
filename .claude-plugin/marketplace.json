@@ -1,0 +1,12 @@
+{
+  "name": "hollowtest",
+  "owner": { "name": "Jefferson Valandro", "url": "https://github.com/jeffev" },
+  "plugins": [
+    {
+      "name": "hollowtest",
+      "source": "./",
+      "description": "Find tests that test nothing: a skill plus a hook that checks every test file the agent writes.",
+      "version": "0.2.0"
+    }
+  ]
+}

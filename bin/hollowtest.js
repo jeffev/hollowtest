@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { analyzeProject } from '../src/index.js';
+import { analyzeProject, changedTestFiles } from '../src/index.js';
 import { formatText, formatGithub, toJSON } from '../src/report.js';
 import { RULES } from '../src/rules.js';
 
@@ -20,6 +20,8 @@ Options
   --min-score <n>              Exit 1 if the integrity score is below n (0-100)
   --fail-on <error|warn>       Exit 1 if any finding at this severity or worse exists
   --include <regex>            Regex for test file paths (default: *.test.* / *.spec.* / __tests__)
+  --changed                    Only test files changed in the working tree (git)
+  --base <ref>                 With --changed: also files changed since <ref>, e.g. origin/main
   --verbose                    Also show info-level findings
   --mutate                     Mutation check: break the code and see if any test notices
   --test-cmd <cmd>             Command for --mutate ({files} = related test files)
@@ -51,6 +53,8 @@ try {
       'test-cmd': { type: 'string' },
       'max-mutants': { type: 'string' },
       seed: { type: 'string' },
+      changed: { type: 'boolean' },
+      base: { type: 'string' },
       rules: { type: 'boolean' },
       'install-skill': { type: 'boolean' },
       version: { type: 'boolean', short: 'v' },
@@ -70,7 +74,7 @@ if (o.rules) {
 }
 
 if (o['install-skill']) {
-  const src = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'skill', 'hollowtest', 'SKILL.md');
+  const src = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'hollowtest', 'SKILL.md');
   const destDir = path.join(process.cwd(), '.claude', 'skills', 'hollowtest');
   fs.mkdirSync(destDir, { recursive: true });
   fs.copyFileSync(src, path.join(destDir, 'SKILL.md'));
@@ -83,7 +87,16 @@ if (o['install-skill']) {
   process.exit(0);
 }
 
-const inputs = args.positionals.length ? args.positionals : ['.'];
+let inputs = args.positionals.length ? args.positionals : ['.'];
+if (o.changed || o.base) {
+  try {
+    inputs = changedTestFiles(o.base);
+  } catch (err) {
+    console.error(`hollowtest: --changed needs a git repository (${err.message})`);
+    process.exit(2);
+  }
+  if (!inputs.length) { console.log('hollowtest: no changed test files.'); process.exit(0); }
+}
 for (const p of inputs) {
   if (!fs.existsSync(p)) { console.error(`hollowtest: path not found: ${p}`); process.exit(2); }
 }
