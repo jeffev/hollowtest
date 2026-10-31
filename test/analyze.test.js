@@ -114,3 +114,18 @@ test('regex .test() and unrelated it() calls are not tests', () => {
   const r = analyzeFile("const ok = /a/.test('a');\nconst it = (x) => x;\nfoo.test('x');", 'x.test.js');
   assert.equal(r.tests.length, 0);
 });
+
+test('a counted loop with literal bounds always runs, so it is not conditional', () => {
+  const code = "test('inherits', () => {\n  for (let i = 0; i < 200; i++) {\n    assert.deepEqual(f(i), [1]);\n  }\n});\n" +
+    "test('maybe empty', () => {\n  for (let i = 0; i < items.length; i++) {\n    assert.equal(items[i], 1);\n  }\n});";
+  const r = analyzeFile(code, 'loop.test.js');
+  assert.deepEqual(r.tests.map((t) => t.findings.map((f) => f.rule)), [[], ['conditional-assertion']]);
+});
+
+test('"allows"/"válido" tests asserting not.toThrow are the spec, not weak', () => {
+  const code = "it('allows %s', () => { expect(() => check(sql)).not.toThrow(); });\n" +
+    "it('deve ser um JWT válido', () => { expect(() => verify(t)).not.toThrow(); });\n" +
+    "it('computes the total', () => { expect(() => total()).not.toThrow(); });";
+  const r = analyzeFile(code, 'spec.test.js');
+  assert.deepEqual(r.tests.map((t) => t.findings.map((f) => f.rule)), [[], [], ['weak-assertions']]);
+});

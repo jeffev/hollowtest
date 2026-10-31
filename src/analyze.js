@@ -6,7 +6,7 @@ import { RULES } from './rules.js';
 const TEST_FNS = new Set(['it', 'test', 'specify', 'xit', 'xtest', 'fit', 'xspecify']);
 const SUITE_FNS = new Set(['describe', 'context', 'suite', 'xdescribe', 'fdescribe', 'xcontext', 'xsuite']);
 const MODIFIERS = new Set(['only', 'skip', 'todo', 'concurrent', 'sequential', 'each', 'failing', 'fails', 'skipIf', 'runIf', 'serial', 'cb', 'shuffle', 'fixme', 'slow', 'step', '()', '``']);
-const SMOKE_NAME = /(not|n['’]t|never)\s+(throw|crash|fail|error|explode|break)|smoke|without (crash|error|throw)|renders?$|mounts?$|can be (created|instantiated|constructed)|\b(pass(es|ing)?|valid(ates)?|accepts?|succeeds?)\b/i;
+const SMOKE_NAME = /(not|n['’]t|never)\s+(throw|crash|fail|error|explode|break)|smoke|without (crash|error|throw)|renders?$|mounts?$|can be (created|instantiated|constructed)|\b(pass(es|ing)?|valid(ates)?|accepts?|allows?|succeeds?)\b|v[aá]lid[oa]s?\b|\b(aceita|permite|n[aã]o (lan[cç]a|quebra|falha))/i;
 
 /**
  * Analyze one test file.

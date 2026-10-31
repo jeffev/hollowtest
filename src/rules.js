@@ -279,7 +279,7 @@ function conditionalReason(a, constArrays = new Set()) {
     if (n.type === 'LogicalExpression' && child === n.right) return 'behind `&&`/`||`';
     if (n.type === 'SwitchCase') return 'inside a `switch` case';
     if ((n.type === 'ForOfStatement' || n.type === 'ForInStatement') && child === n.body && !nonEmpty(n.right)) return 'inside a loop';
-    if ((n.type === 'WhileStatement' || n.type === 'ForStatement' || n.type === 'DoWhileStatement') && child === n.body && n.type !== 'DoWhileStatement') return 'inside a loop';
+    if ((n.type === 'WhileStatement' || n.type === 'ForStatement') && child === n.body && !(n.type === 'ForStatement' && countedLoopRuns(n))) return 'inside a loop';
     if (isFunction(n)) {
       const call = a.ancestors[i - 1];
       if (call?.type === 'CallExpression' && call.arguments.includes(n)) {
@@ -293,6 +293,20 @@ function conditionalReason(a, constArrays = new Set()) {
     }
   }
   return null;
+}
+
+/** for (let i = 0; i < 200; i++): literal bounds, the body runs at least once. */
+function countedLoopRuns(n) {
+  const decl = n.init?.type === 'VariableDeclaration' ? n.init.declarations[0] : null;
+  const start = decl?.init;
+  const t = n.test;
+  if (!start || start.type !== 'NumericLiteral' || t?.type !== 'BinaryExpression') return false;
+  if (t.left.type !== 'Identifier' || t.left.name !== decl.id.name || t.right.type !== 'NumericLiteral') return false;
+  if (t.operator === '<') return start.value < t.right.value;
+  if (t.operator === '<=') return start.value <= t.right.value;
+  if (t.operator === '>') return start.value > t.right.value;
+  if (t.operator === '>=') return start.value >= t.right.value;
+  return false;
 }
 
 function isObjectKeysOfConst(n, constArrays) {

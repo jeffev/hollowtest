@@ -118,13 +118,13 @@ Well-maintained projects score high, as they should. The point is that even ther
 | [express](https://github.com/expressjs/express/tree/1c6f1b0) | 1,159 | 100 | 0 | 1 |
 | [date-fns](https://github.com/date-fns/date-fns/tree/a9739fb) | 2,900 | 100 | 6 | 0 |
 | [ky](https://github.com/sindresorhus/ky/tree/3541888) | 1,285 | 100 | 0 | 11 |
-| [TanStack Query](https://github.com/TanStack/query/tree/8be136b) | 4,818 | 100 | 0 | 15 |
+| [TanStack Query](https://github.com/TanStack/query/tree/8be136b) | 4,818 | 100 | 0 | 12 |
 | [axios](https://github.com/axios/axios/tree/9d11464) | 1,585 | 99 | 10 | 18 |
-| [hono](https://github.com/honojs/hono/tree/17ad0e2) | 3,139 | 99 | 9 | 52 |
+| [hono](https://github.com/honojs/hono/tree/17ad0e2) | 3,139 | 99 | 9 | 51 |
 | [zustand](https://github.com/pmndrs/zustand/tree/382d29c) | 228 | 98 | 0 | 11 |
 | [swr](https://github.com/vercel/swr/tree/8148ef0) | 411 | 96 | 13 | 4 |
-| [nest](https://github.com/nestjs/nest/tree/8d9dd9d) | 7,406 | 95 | 100 | 574 |
-| [zod](https://github.com/colinhacks/zod/tree/2554b70) | 2,693 | 93 | 134 | 246 |
+| [nest](https://github.com/nestjs/nest/tree/8d9dd9d) | 7,406 | 95 | 100 | 573 |
+| [zod](https://github.com/colinhacks/zod/tree/2554b70) | 2,693 | 93 | 134 | 245 |
 
 A few of the findings:
 
