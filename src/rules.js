@@ -184,9 +184,9 @@ export const RULES = [
       if (rs.length && rs.every((a) => a.kind === 'snapshot')) return [{ line: line(rs[0].node), message: 'The only assertion is a snapshot; it gets regenerated instead of read when it fails.' }];
     },
   },
-  { id: 'mocked-subject', severity: 'error', title: 'Mocks the module under test', why: '`foo.test.ts` that mocks `./foo` asserts against the mock. Agents do this to make a failing test pass.' },
+  { id: 'mocked-subject', severity: 'error', title: 'Mocks the module under test', why: '`foo.test.ts` that mocks `./foo` asserts against the mock, not the code.' },
   { id: 'focused-test', severity: 'error', title: '.only left in', why: '`.only` silently disables every other test in the file.' },
-  { id: 'skipped-test', severity: 'warn', title: 'Skipped test', why: 'A skipped test checks nothing. Agents skip tests they cannot make pass.' },
+  { id: 'skipped-test', severity: 'warn', title: 'Skipped test', why: 'A skipped test checks nothing; skipping is the quickest way to silence a failing test.' },
   { id: 'todo-test', severity: 'info', title: 'Todo placeholder', why: 'A placeholder, not a test. Not counted in the score.' },
 ];
 

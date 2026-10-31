@@ -375,7 +375,7 @@ def check_test(fn, ctx, source_lines, mode):
 
     if mode == "skip":
         findings = [f for f in findings if f["rule"] not in ("empty-test", "no-assertions")]
-        findings.append(finding("skipped-test", "warn", fn.lineno, "Test is skipped, so it verifies nothing. Agents often skip a failing test instead of fixing the code."))
+        findings.append(finding("skipped-test", "warn", fn.lineno, "Test is skipped, so it verifies nothing. Skipping a failing test hides the failure instead of fixing it."))
     elif mode == "xfail":
         findings.append(finding("skipped-test", "warn", fn.lineno, "Marked xfail: a failing test that is allowed to fail checks nothing. Fix the code or the test."))
     return findings, len(real)

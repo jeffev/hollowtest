@@ -25,7 +25,7 @@ Test integrity  29/100  grade F
 7 tests in 1 files  ·  4 hollow  ·  2 weak  ·  1 solid
 ```
 
-That is the real output for [`examples/checkout`](examples/checkout/checkout.test.ts): seven tests in the style agents write when asked to "add tests for checkout". All seven would pass.
+That is the real output for [`examples/checkout`](examples/checkout/checkout.test.ts): seven tests that all pass, and most of them would keep passing with the code broken.
 
 Zero config. Works with **Jest, Vitest, Mocha + Chai, node:test, ava, tap, Playwright, Testing Library, supertest** in JS and TS, and with **pytest and unittest** in Python (it uses the Python on your machine; nothing to install). One dependency (the Babel parser).
 

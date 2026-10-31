@@ -1,4 +1,4 @@
-// Tests in the style coding agents write when asked to "add tests for checkout".
+// Seven checkout tests that all pass. Most of them would still pass if the code were broken.
 import { describe, it, expect, vi } from 'vitest';
 import { subtotal, applyCoupon, parseQuantity, fetchCart } from './checkout';
 

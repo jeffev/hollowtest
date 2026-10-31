@@ -1,7 +1,7 @@
 {
   "name": "hollowtest",
   "version": "0.2.0",
-  "description": "Find tests that test nothing (JS, TS, Python). Catches the hollow tests AI coding agents write: no assertions, tautologies, mocked subjects, swallowed errors, unawaited expects.",
+  "description": "Find tests that test nothing (JS, TS, Python). Catches tests that cannot fail: no assertions, tautologies, mocked subjects, swallowed errors, unawaited expects.",
   "type": "module",
   "bin": {
     "hollowtest": "bin/hollowtest.js"

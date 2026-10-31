@@ -5,7 +5,7 @@ description: Write tests that actually fail when the code is wrong, and never ma
 
 # hollowtest: no hollow tests
 
-A hollow test passes no matter what the code does. It turns coverage green and proves nothing. Coding agents write them under pressure to "make the tests pass". This skill is the contract that prevents it, and `npx hollowtest` is the check that enforces it.
+A hollow test passes no matter what the code does. It turns coverage green and proves nothing. People write them in a hurry, and an agent asked to "make the tests pass" can be tempted to. This skill is the contract against it, and `npx hollowtest` is the check that enforces it.
 
 ## The rule
 

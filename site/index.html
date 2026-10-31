@@ -80,7 +80,7 @@
     <div class="bar">
       <span class="label">Test file</span>
       <select id="sample" aria-label="Load an example">
-        <option value="agent">Example: tests an agent wrote</option>
+        <option value="agent">Example: hollow checkout tests</option>
         <option value="classic">Example: classic mistakes</option>
         <option value="solid">Example: solid tests</option>
       </select>
@@ -115,7 +115,7 @@
 <script src="playground.js"></script>
 <script>
 const SAMPLES = {
-  agent: `// What an agent writes when asked to "add tests for checkout and make them pass".
+  agent: `// Seven checkout tests that all pass. Most of them would still pass if the code were broken.
 import { describe, it, expect, vi } from 'vitest';
 import { subtotal, applyCoupon, parseQuantity, fetchCart } from './checkout';
 

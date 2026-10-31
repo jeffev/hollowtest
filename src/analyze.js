@@ -87,7 +87,7 @@ export function analyzeFile(code, file, opts = {}) {
     }
     if (test.findings.some((f) => f.rule === 'bare-expect')) test.findings = test.findings.filter((f) => f.rule !== 'no-assertions');
     if (mode === 'skip') test.findings = test.findings.filter((f) => f.rule !== 'empty-test' && f.rule !== 'no-assertions');
-    if (mode === 'skip') test.findings.push({ rule: 'skipped-test', severity: 'warn', line: test.line, message: 'Test is skipped, so it verifies nothing. Agents often skip a failing test instead of fixing the code.' });
+    if (mode === 'skip') test.findings.push({ rule: 'skipped-test', severity: 'warn', line: test.line, message: 'Test is skipped, so it verifies nothing. Skipping a failing test hides the failure instead of fixing it.' });
     return false; // already analyzed the body
   });
 
