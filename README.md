@@ -2,9 +2,9 @@
 
 **Find tests that test nothing.**
 
-Coding agents are great at making tests pass. Sometimes they do it by writing tests that cannot fail: no assertions, `expect(x).toBe(x)`, a mock of the very module under test, an `expect` inside a `catch` that never runs, a `.resolves` nobody awaits. Coverage goes green. The bug ships.
+A hollow test passes no matter what the code does: no assertions, `expect(x).toBe(x)`, a mock of the very module under test, an `expect` inside a `catch` that never runs, a `.resolves` nobody awaits, `assert (cond, "msg")` in Python. Coverage goes green. The bug ships.
 
-`hollowtest` reads your test files and flags those tests in seconds (7,400 tests of NestJS in about 3 s), then (optionally) breaks your code on purpose to prove which behavior no test notices. It ships with an agent skill so Claude Code, Codex and Cursor stop writing them in the first place.
+`hollowtest` reads your test files and flags those tests in seconds (7,400 NestJS tests in about 3 s), then (optionally) breaks your code on purpose to prove which behavior no test notices. They hide in well-known projects too: zod, NestJS, swr, requests and flask all have a few (examples below). And when a coding agent writes your tests, the Claude Code plugin checks every test file it writes, on the spot.
 
 ```bash
 npx hollowtest
