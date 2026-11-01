@@ -119,7 +119,7 @@ export const RULES = [
           const fix = direct && a.parent?.type === 'ExpressionStatement'
             ? [{ start: a.node.start, end: a.node.start, text: 'await ', label: `await .${a.matcher}` }, ...(fn.async ? [] : [{ start: fn.start, end: fn.start, text: 'async ', label: 'make the test async' }])]
             : undefined;
-          out.push({ line: line(a.node), message: `\`${a.matcher}\` is asynchronous but not awaited or returned: the test finishes before it runs.`, fix });
+          out.push({ line: line(a.node), message: `\`${a.matcher}\` is asynchronous but not awaited or returned: the test finishes before it runs. Await it, or (to keep work in flight on purpose) store the promise and await it before the test ends.`, fix });
           continue;
         }
         if (usesDone) continue;
