@@ -1,6 +1,10 @@
 # hollowtest
 
+[![npm](https://img.shields.io/npm/v/hollowtest)](https://www.npmjs.com/package/hollowtest) [![ci](https://github.com/jeffev/hollowtest/actions/workflows/ci.yml/badge.svg)](https://github.com/jeffev/hollowtest/actions/workflows/ci.yml) [![license](https://img.shields.io/npm/l/hollowtest)](LICENSE)
+
 **Find tests that test nothing.**
+
+![Fixing two hollow tests in the hollowtest playground: the score goes from 0 to 100](docs/assets/demo.gif)
 
 A hollow test passes no matter what the code does: no assertions, `expect(x).toBe(x)`, a mock of the very module under test, an `expect` inside a `catch` that never runs, a `.resolves` nobody awaits, `assert (cond, "msg")` in Python. Coverage goes green. The bug ships.
 
