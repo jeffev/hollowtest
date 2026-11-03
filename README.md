@@ -4,7 +4,7 @@
 
 **Find tests that test nothing.**
 
-![Fixing four hollow tests in the hollowtest playground: the score goes from 0 to 100](docs/assets/demo.gif)
+![Fixing four hollow tests in the hollowtest playground, two of them with one-click fixes: the score goes from 0 to 100](docs/assets/demo.gif)
 
 A hollow test passes no matter what the code does: no assertions, `expect(x).toBe(x)`, a mock of the very module under test, an `expect` inside a `catch` that never runs, a `.resolves` nobody awaits, `assert (cond, "msg")` in Python. Coverage goes green. The bug ships.
 
