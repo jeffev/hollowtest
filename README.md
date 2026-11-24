@@ -73,7 +73,7 @@ It only rewrites what has one correct answer: `expect(x).toBeNull` gets its `()`
 
 ## The mutation check: proof, not opinion
 
-Static rules find tests that look hollow. `--mutate` proves it. It changes your code the way a real bug would (`>` becomes `>=`, `&&` becomes `||`, a condition is forced to `true`, a return value becomes `null`), runs only the tests that import that file, and restores the file.
+Static rules find tests that look hollow. `--mutate` proves it. It changes your code the way a real bug would (`>` becomes `>=`, `&&` becomes `||`, a condition is forced to `true`, a return value becomes `null`), runs only the tests that import that file, and restores the file. It works on JavaScript, TypeScript and Python.
 
 ```bash
 npx hollowtest --mutate pricing.js
@@ -81,24 +81,38 @@ npx hollowtest --mutate pricing.js
 
 ```
 hollowtest --mutate  1 source file(s), 1 test file(s), runner: node --test {files}
-....SSSSSS..S....
+S..SSSS.S.SS..SS.S.SS.S.
 
-  survived  pricing.js:11  > → >=
-            if (coupon === 'HALF' && total > 50) {
-  survived  pricing.js:11  === → !==
-            if (coupon === 'HALF' && total > 50) {
-  survived  pricing.js:11  && → ||
-            if (coupon === 'HALF' && total > 50) {
-  survived  pricing.js:12  / → *
-            return total / 2;
+  survived   pricing.js:11  > → >=
+             if (coupon === 'HALF' && total > 50) {
+  survived   pricing.js:11  && → ||
+             if (coupon === 'HALF' && total > 50) {
+  survived   pricing.js:12  / → *
+             return total / 2;
+  ...
+  unreached  pricing.js:19  > → >=
+             if (points > 1000) return points * 0.1;
+  unreached  pricing.js:20  return … → return null
+             return 0;
   ...
 
-Mutation score  59%  10 of 17 breaking changes caught by a test, 7 slipped through
+Mutation score  42%  10 of 24 breaking changes caught by a test, 14 slipped through (7 in code the tests run, 7 in code no test runs)
 ```
 
-All seven survivors are in `discount()`, the one function whose test only checks `assert.ok(result)` ([`test/mutation-sample`](test/mutation-sample/pricing.test.js)). The well-tested functions next to it lose no mutants.
+The seven survivors are in `discount()`, the one function whose test only checks `assert.ok(result)`, and the seven unreached mutants are in `loyaltyBonus()`, which no test calls ([`test/mutation-sample`](test/mutation-sample/pricing.test.js)). The well-tested functions next to them lose no mutants.
 
-Every survivor is a bug your tests would let through. It detects Vitest, Jest, Mocha, ava and node:test from `package.json`, or takes `--test-cmd "pnpm test {files}"`. Source files are restored after each mutant, and on Ctrl+C. If the process is killed, the next run restores them from `.hollowtest-restore.json`. Mark a line with `// hollowtest-ignore` to leave it alone.
+Every mutant that slips through is a bug your tests would let through. They come in two kinds, and hollowtest tells them apart:
+
+- **survived**: a test runs this code, but no assertion notices the change. Strengthen the assertion.
+- **unreached**: no test runs this code at all. Write a test first; there is nothing to strengthen yet.
+
+To tell them apart, it replaces the mutated expression with one that throws. If the tests still pass, nothing ran it. That works with any test runner and needs no coverage setup (`--no-probe` skips it). For Python it uses pytest when installed, otherwise unittest, and follows imports through your packages to find the tests that exercise each module:
+
+```bash
+npx hollowtest --mutate app/pricing.py
+```
+
+It detects Vitest, Jest, Mocha, ava and node:test from `package.json`, or takes `--test-cmd "pnpm test {files}"`. Source files are restored after each mutant, and on Ctrl+C. If the process is killed, the next run restores them from `.hollowtest-restore.json`. Mark a line with `// hollowtest-ignore` (in Python, `# hollowtest-ignore` or `# pragma: no cover`) to leave it alone.
 
 It samples 30 mutants by default (`--max-mutants 100` for more, `--seed` to vary the sample). It is a quick probe, not a replacement for [Stryker](https://stryker-mutator.io/) on a whole codebase.
 
@@ -148,6 +162,29 @@ On GitHub Actions it emits annotations, so findings appear inline on the pull re
   with: { node-version: 22 }
 - run: npx hollowtest --fail-on error
 ```
+
+Or use the action, which runs the same check with annotations:
+
+```yaml
+- uses: actions/checkout@v4
+- uses: jeffev/hollowtest@v0.3.0
+  with:
+    fail-on: error        # or min-score: 90
+```
+
+### pre-commit
+
+For [pre-commit](https://pre-commit.com/) (handy in Python projects; it sets up Node on its own), add to `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/jeffev/hollowtest
+    rev: v0.3.0
+    hooks:
+      - id: hollowtest
+```
+
+It checks the test files in each commit and blocks the commit when one of them cannot fail.
 
 ## In your editor (ESLint)
 
@@ -228,7 +265,7 @@ console.log(summary.score, summary.hollow);
 
 ## Limits
 
-- JavaScript, TypeScript and Python. `--mutate` is JavaScript/TypeScript only for now.
+- JavaScript, TypeScript and Python, including `--mutate`.
 - Static analysis judges what it can see. A helper imported from a package it cannot read is reported as a warning, not an error.
 - It does not run your tests unless you pass `--mutate`.
 

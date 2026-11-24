@@ -37,3 +37,50 @@ test('--mutate finds the function covered only by a hollow test, and restores th
   assert.equal(fs.readFileSync(path.join(sampleDir, 'pricing.js'), 'utf8'), before, 'source must be restored');
   assert.ok(!fs.existsSync(path.join(sampleDir, '.hollowtest-restore.json')), 'journal must be removed');
 });
+
+test('--mutate tells code no test runs (unreached) from code the tests run but do not check', () => {
+  const r = spawnSync(process.execPath, [bin, '--mutate', '.', '--json'], { cwd: sampleDir, encoding: 'utf8', timeout: 240_000 });
+  assert.equal(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout);
+  const unreached = out.results.filter((m) => m.status === 'unreached');
+  // loyaltyBonus() (lines 18-21) is never called by any test
+  assert.ok(unreached.length >= 3, 'expected unreached mutants in loyaltyBonus()');
+  assert.ok(unreached.every((m) => m.line >= 18 && m.line <= 21), JSON.stringify(unreached.map((m) => m.line)));
+  assert.equal(out.unreached, unreached.length);
+  assert.equal(out.survived, out.mutants - out.killed, 'survived keeps counting every mutant that slipped through');
+});
+
+test('--no-probe skips the reachability probes', () => {
+  const r = spawnSync(process.execPath, [bin, '--mutate', '.', '--json', '--no-probe'], { cwd: sampleDir, encoding: 'utf8', timeout: 240_000 });
+  assert.equal(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout);
+  assert.equal(out.unreached, 0);
+  assert.ok(out.results.some((m) => m.status === 'survived' && m.line >= 18));
+});
+
+const hasPytest = spawnSync(process.env.HOLLOWTEST_PYTHON || 'python', ['-c', 'import pytest'], { encoding: 'utf8' }).status === 0;
+const pySampleDir = path.join(here, 'mutation-sample-py');
+
+test('Python mutants: operators, conditions, literals and returns, with offsets that splice cleanly', { skip: !hasPytest && 'needs Python with pytest' }, () => {
+  const file = path.join(pySampleDir, 'pricing.py');
+  const r = spawnSync(process.env.HOLLOWTEST_PYTHON || 'python', ['-I', path.join(here, '..', 'src', 'python', 'mutate_py.py')], { input: JSON.stringify({ cmd: 'mutants', files: [file] }), encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  const mutants = JSON.parse(r.stdout).mutants[file];
+  const src = fs.readFileSync(file, 'utf8');
+  const labels = mutants.map((m) => m.label);
+  for (const l of ['>= → >', 'and → or', '== → !=', '/ → *', 'if … → if True', 'return … → return None', '100 → 101']) assert.ok(labels.includes(l), `missing ${l} in ${labels}`);
+  for (const m of mutants) assert.equal(src.slice(m.start, m.end), m.original, `offsets of ${m.label} on line ${m.line}`);
+});
+
+test('--mutate works on Python: survivors in discount(), unreached in loyalty_bonus(), source restored', { skip: !hasPytest && 'needs Python with pytest' }, () => {
+  const before = fs.readFileSync(path.join(pySampleDir, 'pricing.py'), 'utf8');
+  const r = spawnSync(process.execPath, [bin, '--mutate', 'pricing.py', '--json'], { cwd: pySampleDir, encoding: 'utf8', timeout: 240_000 });
+  assert.equal(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout);
+  assert.match(out.runner, /pytest/);
+  const survived = out.results.filter((m) => m.status === 'survived');
+  const unreached = out.results.filter((m) => m.status === 'unreached');
+  assert.ok(survived.length >= 3 && survived.every((m) => m.line >= 11 && m.line <= 14), JSON.stringify(survived.map((m) => m.line)));
+  assert.ok(unreached.length >= 3 && unreached.every((m) => m.line >= 17 && m.line <= 20), JSON.stringify(unreached.map((m) => m.line)));
+  assert.equal(fs.readFileSync(path.join(pySampleDir, 'pricing.py'), 'utf8'), before, 'source must be restored');
+});

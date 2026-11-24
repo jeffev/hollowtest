@@ -13,3 +13,9 @@ export function discount(total, coupon) {
   }
   return total;
 }
+
+// No test calls this: its mutants survive because nothing runs it.
+export function loyaltyBonus(points) {
+  if (points > 1000) return points * 0.1;
+  return 0;
+}

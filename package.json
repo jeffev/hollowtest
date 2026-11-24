@@ -1,7 +1,7 @@
 {
   "name": "hollowtest",
-  "version": "0.2.0",
-  "description": "Find tests that test nothing (JS, TS, Python). Catches tests that cannot fail: no assertions, tautologies, mocked subjects, swallowed errors, unawaited expects.",
+  "version": "0.3.0",
+  "description": "Find tests that test nothing (JS, TS, Python). Catches tests that cannot fail, and proves it with mutation testing that tells unchecked code from code no test runs.",
   "type": "module",
   "bin": {
     "hollowtest": "bin/hollowtest.js"
@@ -31,7 +31,11 @@
     "coding-agents",
     "claude-code",
     "agent-skills",
-    "lint"
+    "lint",
+    "python",
+    "pytest",
+    "pre-commit",
+    "github-action"
   ],
   "engines": {
     "node": ">=20"

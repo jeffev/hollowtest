@@ -1,0 +1,7 @@
+- id: hollowtest
+  name: hollowtest
+  description: Find tests that test nothing (no assertions, tautologies, swallowed errors, unawaited expects). JS, TS and Python.
+  entry: hollowtest --fail-on error
+  language: node
+  files: '(^|/)(test_[^/]*\.py|[^/]*_test\.py|tests\.py|[^/]*\.(test|spec)\.[cm]?[jt]sx?|__tests__/[^/]*\.[cm]?[jt]sx?)$'
+  require_serial: true

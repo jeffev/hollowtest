@@ -1,3 +1,5 @@
 node_modules/
 .hollowtest-restore.json
 *.log
+__pycache__/
+.pytest_cache/

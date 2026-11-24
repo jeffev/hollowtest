@@ -30,6 +30,7 @@ Options
   --mutate                     Mutation check: break the code and see if any test notices
   --test-cmd <cmd>             Command for --mutate ({files} = related test files)
   --max-mutants <n>            Mutants per run for --mutate (default: 30)
+  --no-probe                   With --mutate: skip the probes that tell unreached code from unchecked code
   --install-skill              Add the hollowtest skill to .claude/skills (Claude Code) and print the
                                AGENTS.md snippet for Codex, Cursor and others
   --rules                      List the rules and exit
@@ -57,6 +58,7 @@ try {
       'test-cmd': { type: 'string' },
       'max-mutants': { type: 'string' },
       seed: { type: 'string' },
+      'no-probe': { type: 'boolean' },
       changed: { type: 'boolean' },
       fix: { type: 'boolean' },
       badge: { type: 'boolean' },
@@ -110,7 +112,7 @@ for (const p of inputs) {
 
 if (o.mutate) {
   const { runMutation } = await import('../src/mutate.js');
-  const code = await runMutation(inputs, { testCmd: o['test-cmd'], maxMutants: Number(o['max-mutants'] || 30), seed: o.seed, json: o.json || o.format === 'json', include: o.include });
+  const code = await runMutation(inputs, { testCmd: o['test-cmd'], maxMutants: Number(o['max-mutants'] || 30), seed: o.seed, json: o.json || o.format === 'json', include: o.include, probe: !o['no-probe'] });
   process.exit(code);
 }
 

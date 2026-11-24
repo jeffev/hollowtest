@@ -410,26 +410,27 @@
     <div>
       <span class="eyebrow">Proof, not opinion</span>
       <h2 class="title">Break the code. See who notices.</h2>
-      <p class="lede">Static rules find tests that <i>look</i> hollow. <code>--mutate</code> proves it: it plants the kind of bug a real person writes and runs only the tests that import that file.</p>
+      <p class="lede">Static rules find tests that <i>look</i> hollow. <code>--mutate</code> proves it: it plants the kind of bug a real person writes and runs only the tests that import that file. JavaScript, TypeScript and Python.</p>
       <ol class="steps">
         <li><span>1</span><p><b>Mutate.</b> <code>&gt;</code> becomes <code>&gt;=</code>, <code>&amp;&amp;</code> becomes <code>||</code>, a condition is forced to <code>true</code>, a return becomes <code>null</code>.</p></li>
-        <li><span>2</span><p><b>Run.</b> Vitest, Jest, Mocha, ava or node:test, detected from <code>package.json</code>, or your own <code>--test-cmd</code>.</p></li>
-        <li><span>3</span><p><b>Restore.</b> After every mutant, on Ctrl+C, and from a journal if the process is killed.</p></li>
+        <li><span>2</span><p><b>Run.</b> Vitest, Jest, Mocha, ava, node:test, pytest or unittest, detected for you, or your own <code>--test-cmd</code>.</p></li>
+        <li><span>3</span><p><b>Sort.</b> <code>survived</code>: a test runs the code but checks nothing that changed. <code>unreached</code>: no test runs it at all.</p></li>
+        <li><span>4</span><p><b>Restore.</b> After every mutant, on Ctrl+C, and from a journal if the process is killed.</p></li>
       </ol>
     </div>
 <pre class="term"><span class="d">$</span> <span class="b">npx hollowtest --mutate pricing.js</span>
 <span class="d">hollowtest --mutate  1 source file(s), 1 test file(s)</span>
-<span class="g">....</span><span class="r">SSSSSS</span><span class="g">..</span><span class="r">S</span><span class="g">....</span>
+<span class="r">S</span><span class="g">..</span><span class="r">SSSS</span><span class="g">.</span><span class="r">S</span><span class="g">.</span><span class="r">SS</span><span class="g">..</span><span class="r">SS</span><span class="g">.</span><span class="r">S</span><span class="g">.</span><span class="r">SS</span><span class="g">.</span><span class="r">S</span><span class="g">.</span>
 
-  <span class="r">survived</span>  pricing.js:11  <span class="y">&gt; → &gt;=</span>
-            if (coupon === 'HALF' &amp;&amp; total &gt; 50) {
-  <span class="r">survived</span>  pricing.js:11  <span class="y">&amp;&amp; → ||</span>
-            if (coupon === 'HALF' &amp;&amp; total &gt; 50) {
-  <span class="r">survived</span>  pricing.js:12  <span class="y">/ → *</span>
-            return total / 2;
+  <span class="r">survived </span>  pricing.js:11  <span class="y">&gt; → &gt;=</span>
+             if (coupon === 'HALF' &amp;&amp; total &gt; 50) {
+  <span class="r">survived </span>  pricing.js:12  <span class="y">/ → *</span>
+             return total / 2;
+  <span class="y">unreached</span>  pricing.js:19  <span class="y">&gt; → &gt;=</span>
+             if (points &gt; 1000) return points * 0.1;
   <span class="d">...</span>
 
-<span class="b">Mutation score  59%</span>  <span class="d">10 of 17 caught,</span> <span class="r">7 slipped through</span></pre>
+<span class="b">Mutation score  42%</span>  <span class="d">10 of 24 caught,</span> <span class="r">7 unchecked</span>, <span class="y">7 never run</span></pre>
   </div>
 </section>
 
